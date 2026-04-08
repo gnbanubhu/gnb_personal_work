@@ -1,0 +1,55 @@
+================================================================================
+SPARK EXECUTION PLAN — spark_core.py
+================================================================================
+
+--------------------------------------------------------------------------------
+1. RDD CREATION (Line 21)
+--------------------------------------------------------------------------------
+sc.parallelize([...7 records...])
+
+- Distributes 7 sales tuples across local[*] partitions (8 on this machine).
+- This is the source RDD — no computation yet.
+
+--------------------------------------------------------------------------------
+2. TRANSFORMATION DAG (Lazy — Lines 32–34)
+--------------------------------------------------------------------------------
+These are NOT executed until an action is called.
+
+sales
+  └── reduceByKey(a + b)        → total_by_category   [Shuffle Stage]
+        └── sortBy(x[1], desc)  → sorted_sales         [Shuffle Stage]
+              └── filter(x[1] > 400) → high_sales      [No Shuffle]
+
+  Step | Operation      | Type   | Shuffle?
+  -----|----------------|--------|--------------------------------------------------
+  1    | reduceByKey    | Wide   | Yes — groups by key across partitions
+  2    | sortBy         | Wide   | Yes — global sort requires range partitioning
+  3    | filter         | Narrow | No  — applied locally on each partition
+
+--------------------------------------------------------------------------------
+3. ACTIONS & TRIGGERED JOBS (Lines 40–50)
+--------------------------------------------------------------------------------
+
+  Line | Action                        | Job   | Stages
+  -----|-------------------------------|-------|-------------------------------------
+  40   | sorted_sales.collect()        | Job 1 | Stage 0: reduceByKey
+       |                               |       | Stage 1: sortBy
+  46   | high_sales.collect()          | Job 2 | Recomputes Stage 0 + Stage 1 + filter
+  49   | total_by_category.count()     | Job 3 | Recomputes Stage 0 only
+  50   | sales.map(...).sum()          | Job 4 | Stage 0: map + sum (no shuffle)
+
+NOTE: Since there is no caching (persist()/cache()), reduceByKey is recomputed
+3 times (for Jobs 1, 2, and 3). Adding .cache() on total_by_category after
+line 32 would eliminate the redundant recomputations.
+
+--------------------------------------------------------------------------------
+4. PHYSICAL EXECUTION SUMMARY
+--------------------------------------------------------------------------------
+
+  Stage 0  →  parallelize → map/combine → shuffle write   (reduceByKey)
+  Stage 1  →  shuffle read → sort → collect               (sortBy)
+
+- 2 shuffle stages are the main cost.
+- All 4 jobs run on local[*] with 8 tasks per stage (one per core).
+
+================================================================================

@@ -1,0 +1,173 @@
+================================================================================
+EXECUTOR, CORES & PARTITIONS ANALYSIS — spark_core.py
+================================================================================
+
+--------------------------------------------------------------------------------
+1. THE RELATIONSHIP (MENTAL MODEL)
+--------------------------------------------------------------------------------
+
+Cluster
+  └── Executor(s)          ← JVM process (memory + CPU)
+        └── Core(s)        ← thread inside the executor
+              └── Task     ← processes 1 partition at a time
+
+  KEY RULE: 1 Core runs 1 Task at a time. 1 Task processes 1 Partition.
+
+--------------------------------------------------------------------------------
+2. DEFINITIONS
+--------------------------------------------------------------------------------
+
+  Concept     | What it is
+  ------------|--------------------------------------------------------------
+  Partition   | A chunk of your RDD/DataFrame data. Unit of parallelism.
+  Task        | A unit of work Spark sends to a core — processes one partition.
+  Core        | A thread slot inside an executor. Runs one task at a time.
+  Executor    | A JVM process on a worker node. Has N cores and M GB memory.
+
+--------------------------------------------------------------------------------
+3. IN spark_core.py — LOCAL MODE (local[*])
+--------------------------------------------------------------------------------
+
+  Your app runs in local mode — no cluster, everything on one machine:
+
+  local[*]  →  1 Executor (driver = executor)
+                └── 8 Cores  (matches your Mac's CPU threads)
+                      └── 8 Tasks running in parallel
+                            └── each Task processes 1 Partition
+
+  sc.parallelize([...7 records...])
+  → 7 records split into 8 partitions (default = num cores)
+
+    P0  P1  P2  P3  P4  P5  P6  P7
+    ↓   ↓   ↓   ↓   ↓   ↓   ↓   ↓
+    T0  T1  T2  T3  T4  T5  T6  T7   ← 8 tasks launched
+    └───────────────────────────────── all on 8 cores in parallel
+
+--------------------------------------------------------------------------------
+4. HOW THEY SCALE IN A REAL CLUSTER
+--------------------------------------------------------------------------------
+
+  Cluster (3 Worker Nodes)
+    ├── Worker Node 1
+    │     └── Executor  [4 cores, 8GB RAM]
+    │           ├── Core 1 → Task → Partition 0
+    │           ├── Core 2 → Task → Partition 1
+    │           ├── Core 3 → Task → Partition 2
+    │           └── Core 4 → Task → Partition 3
+    │
+    ├── Worker Node 2
+    │     └── Executor  [4 cores, 8GB RAM]
+    │           ├── Core 1 → Task → Partition 4
+    │           ├── Core 2 → Task → Partition 5
+    │           ├── Core 3 → Task → Partition 6
+    │           └── Core 4 → Task → Partition 7
+    │
+    └── Worker Node 3
+          └── Executor  [4 cores, 8GB RAM]
+                ├── Core 1 → Task → Partition 8
+                ├── Core 2 → Task → Partition 9
+                ├── Core 3 → Task → Partition 10
+                └── Core 4 → Task → Partition 11
+
+  12 cores → 12 tasks in parallel → 12 partitions processed simultaneously
+
+--------------------------------------------------------------------------------
+5. THE GOLDEN RULES
+--------------------------------------------------------------------------------
+
+  RULE 1 — Partitions = Max Parallelism
+  ───────────────────────────────────────
+    partitions < cores  →  some cores sit idle        (wasted resources)
+    partitions > cores  →  cores process in waves     (acceptable)
+    partitions = cores  →  perfect utilization        (ideal)
+
+  RULE 2 — Too few partitions = bottleneck
+  ──────────────────────────────────────────
+    1 partition, 8 cores  →  only 1 core works, 7 sit idle
+
+  RULE 3 — Too many partitions = overhead
+  ─────────────────────────────────────────
+    10,000 partitions, 8 cores  →  task scheduling overhead dominates
+
+  RULE 4 — Partition size sweet spot
+  ────────────────────────────────────
+    Aim for 128MB–256MB per partition
+      → too small : too many tasks, scheduling overhead
+      → too large : memory pressure, GC pauses on executors
+
+--------------------------------------------------------------------------------
+6. IN spark_core.py — WHAT ACTUALLY HAPPENED
+--------------------------------------------------------------------------------
+
+  Stage 0 (reduceByKey):
+    8 partitions → 8 tasks → 8 cores → all ran in parallel        ✓
+    shuffle write → data grouped by key written to disk
+
+  Stage 1 (sortBy):
+    8 partitions → 8 tasks → 8 cores → all ran in parallel        ✓
+    shuffle read  → sorted globally
+
+  Each Action (collect, count, sum):
+    re-triggers the full DAG (no cache) → 3x recomputation        ✗
+
+--------------------------------------------------------------------------------
+7. HOW TO CONTROL PARTITIONS
+--------------------------------------------------------------------------------
+
+  Method                              | When to use
+  ------------------------------------|----------------------------------------
+  sc.parallelize(data, numSlices=N)   | Set partitions at creation
+  rdd.repartition(N)                  | Increase or decrease (causes shuffle)
+  rdd.coalesce(N)                     | Reduce only (no shuffle, more efficient)
+  spark.default.parallelism           | Default partition count for RDD ops
+  spark.sql.shuffle.partitions        | Default for DataFrame shuffle ops
+                                      | (default: 200)
+
+--------------------------------------------------------------------------------
+8. APPLIED TO spark_core.py — OPTIMIZATION
+--------------------------------------------------------------------------------
+
+  Current (no cache):
+    sales.reduceByKey(...)            → total_by_category
+    total_by_category.sortBy(...)     → sorted_sales
+    sorted_sales.filter(...)          → high_sales
+
+    Job 1: sorted_sales.collect()     → runs Stage 0 + Stage 1 + Stage 2
+    Job 2: high_sales.collect()       → re-runs Stage 0 + Stage 1 + Stage 2 + filter
+    Job 3: total_by_category.count()  → re-runs Stage 0 + Stage 1
+    Job 4: sales.map(...).sum()       → runs Stage 0 only
+
+    reduceByKey recomputed: 3 times   ✗
+
+  Optimized (with cache):
+    total_by_category = sales.reduceByKey(lambda a, b: a + b).cache()
+    sorted_sales      = total_by_category.sortBy(lambda x: x[1], ascending=False).cache()
+
+    Job 1: sorted_sales.collect()     → computes + caches Stage 0, 1, 2
+    Job 2: high_sales.collect()       → reads from cache, applies filter only
+    Job 3: total_by_category.count()  → reads from cache (Stage 1)
+    Job 4: sales.map(...).sum()       → reads from source, maps + sums
+
+    reduceByKey recomputed: 1 time    ✓
+
+--------------------------------------------------------------------------------
+9. SUMMARY
+--------------------------------------------------------------------------------
+
+  More partitions  →  more parallelism  →  faster (up to core count)
+  More cores       →  more tasks run simultaneously
+  More executors   →  more total cores + memory across the cluster
+
+  Bottleneck order:  Partitions → Cores → Executors → Network (shuffle)
+
+  For spark_core.py (local[*], 8 cores):
+    ┌─────────────────┬───────────────────────────────────────────────┐
+    │ Executors       │ 1 (driver acts as executor in local mode)     │
+    │ Cores           │ 8 (one per logical CPU thread)                │
+    │ Partitions      │ 8 (default = number of cores)                 │
+    │ Tasks per Stage │ 8 (one per partition)                         │
+    │ Shuffle Stages  │ 2 (reduceByKey + sortBy)                      │
+    │ Total Jobs      │ 4 (one per action call)                       │
+    └─────────────────┴───────────────────────────────────────────────┘
+
+================================================================================
