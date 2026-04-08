@@ -1,0 +1,165 @@
+================================================================================
+SPARK SQL EXECUTION PLAN — spark_sql.py
+================================================================================
+
+--------------------------------------------------------------------------------
+1. SETUP — DATAFRAMES & TEMP VIEWS (Lines 37–41)
+--------------------------------------------------------------------------------
+
+  employees  list  →  spark.createDataFrame()  →  emp_df   →  TempView "employees"
+  departments list →  spark.createDataFrame()  →  dept_df  →  TempView "departments"
+
+  - Data is parallelized into 8 partitions (local[*]).
+  - Temp views are logical pointers — no computation yet.
+  - Spark's Catalyst Optimizer handles all SQL query planning.
+
+--------------------------------------------------------------------------------
+2. QUERY 1 — SELECT * FROM employees ORDER BY salary DESC (Line 47)
+--------------------------------------------------------------------------------
+
+  Logical Plan:
+    Scan(employees) → Sort(salary DESC)
+
+  Physical Plan:
+    Stage 0: Scan + Exchange (shuffle for global sort)
+    Stage 1: Sort → collect → show()
+
+  Phase    | Operation                              | Shuffle?
+  ---------|----------------------------------------|---------
+  Scan     | Read emp_df partitions                 | No
+  Exchange | Range partition by salary for sort     | Yes
+  Sort     | Sort within each partition             | No
+
+--------------------------------------------------------------------------------
+3. QUERY 2 — GROUP BY + AVG + SUM + COUNT (Lines 52–60)
+--------------------------------------------------------------------------------
+
+  SQL:
+    SELECT department,
+           COUNT(*)             AS headcount,
+           ROUND(AVG(salary),0) AS avg_salary,
+           SUM(salary)          AS total_salary
+    FROM employees
+    GROUP BY department
+    ORDER BY avg_salary DESC
+
+  Logical Plan:
+    Scan(employees) → Aggregate(GROUP BY department) → Sort(avg_salary DESC)
+
+  Physical Plan:
+    Stage 0: Scan → partial aggregate per partition (map-side combine)
+                  ↓ shuffle by department key
+    Stage 1: Final aggregate → COUNT, AVG, SUM per department
+                  ↓ shuffle for global sort
+    Stage 2: Sort by avg_salary DESC → show()
+
+  Phase        | Operation                              | Shuffle?
+  -------------|----------------------------------------|---------
+  Partial Agg  | Pre-aggregate per partition            | No
+  HashAggregate| Final GROUP BY department              | Yes
+  Sort         | Order by avg_salary DESC               | Yes
+
+  NOTE: Catalyst applies partial aggregation (map-side combine) before the
+  shuffle — reduces data moved across the network.
+
+--------------------------------------------------------------------------------
+4. QUERY 3 — JOIN employees + departments (Lines 65–70)
+--------------------------------------------------------------------------------
+
+  SQL:
+    SELECT e.name, e.department, e.salary, d.location
+    FROM employees e
+    JOIN departments d ON e.department = d.department
+    ORDER BY e.salary DESC
+
+  Logical Plan:
+    Scan(employees)   ──┐
+                        ├── JOIN ON department → Sort(salary DESC)
+    Scan(departments) ──┘
+
+  Physical Plan:
+    departments (3 rows) → BroadcastHashJoin  ← Catalyst picks automatically
+    employees   (7 rows) → probed against broadcast table
+                         → Sort(salary DESC)
+                         → show()
+
+  Phase     | Operation                              | Shuffle?
+  ----------|----------------------------------------|---------------------------
+  Broadcast | dept_df broadcast to all partitions    | No shuffle — broadcast
+  HashJoin  | Match on department key                | No
+  Sort      | Order by salary DESC                   | Yes
+
+  NOTE: Since departments is tiny (3 rows), Catalyst auto-selects
+  BroadcastHashJoin — avoids a full shuffle join entirely.
+
+--------------------------------------------------------------------------------
+5. QUERY 4 — WHERE salary > 80000 ORDER BY salary DESC (Line 75)
+--------------------------------------------------------------------------------
+
+  SQL:
+    SELECT name, department, salary
+    FROM employees
+    WHERE salary > 80000
+    ORDER BY salary DESC
+
+  Logical Plan:
+    Scan(employees) → Filter(salary > 80000) → Sort(salary DESC)
+
+  Physical Plan:
+    Stage 0: Scan → Filter applied per partition (pushed down)
+                  ↓ shuffle for global sort
+    Stage 1: Sort → show()
+
+  Phase    | Operation                              | Shuffle?
+  ---------|----------------------------------------|---------
+  Filter   | Applied locally per partition          | No
+  Exchange | Range partition for sort               | Yes
+  Sort     | Sort within each partition             | No
+
+  NOTE: Catalyst's predicate pushdown applies the WHERE filter as early as
+  possible — before the shuffle — reducing data moved across partitions.
+
+--------------------------------------------------------------------------------
+6. JOB SUMMARY
+--------------------------------------------------------------------------------
+
+  Job | Query                        | Stages | Shuffles | Catalyst Optimization
+  ----|------------------------------|--------|----------|-----------------------
+  1   | SELECT * ORDER BY salary     | 2      | 1        | Range partition sort
+  2   | GROUP BY + AVG/SUM/COUNT     | 3      | 2        | Partial aggregation
+  3   | JOIN + ORDER BY salary       | 2      | 1        | BroadcastHashJoin
+  4   | WHERE + ORDER BY salary      | 2      | 1        | Predicate pushdown
+
+--------------------------------------------------------------------------------
+7. KEY DIFFERENCE vs spark_core.py (RDD)
+--------------------------------------------------------------------------------
+
+  Feature          | spark_core.py (RDD)    | spark_sql.py (SQL/DataFrame)
+  -----------------|------------------------|--------------------------------
+  Optimization     | Manual                 | Catalyst Optimizer (automatic)
+  Join strategy    | Manual                 | Auto BroadcastHashJoin
+  Filter timing    | Manual                 | Predicate pushdown
+  Aggregation      | Manual reduceByKey     | Partial agg + HashAggregate
+  Query planning   | Developer              | Catalyst + Tungsten engine
+
+--------------------------------------------------------------------------------
+8. CATALYST OPTIMIZER — WHAT IT DID AUTOMATICALLY
+--------------------------------------------------------------------------------
+
+  1. Predicate Pushdown
+     → WHERE salary > 80000 applied before shuffle (Query 4)
+     → Reduces rows early, less data to sort
+
+  2. Partial Aggregation (Map-side Combine)
+     → GROUP BY pre-aggregated per partition before shuffle (Query 2)
+     → Only 3 rows (one per department) shuffled instead of 7
+
+  3. BroadcastHashJoin
+     → departments (3 rows) broadcast to all executors (Query 3)
+     → Eliminates shuffle join entirely
+
+  4. Column Pruning
+     → Only required columns read and passed through the plan
+     → Reduces memory and I/O at every stage
+
+================================================================================

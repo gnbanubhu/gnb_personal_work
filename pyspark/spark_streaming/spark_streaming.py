@@ -15,6 +15,7 @@ from pyspark.sql.functions import col, window, current_timestamp
 spark = SparkSession.builder \
     .appName("SparkStreamingDemo") \
     .master("local[*]") \
+    .config("spark.sql.shuffle.partitions", "4") \
     .getOrCreate()
 spark.sparkContext.setLogLevel("ERROR")
 
@@ -47,6 +48,7 @@ query = windowed.writeStream \
     .outputMode("update") \
     .format("console") \
     .option("truncate", False) \
+    .option("checkpointLocation", "/tmp/spark_streaming_checkpoint") \
     .trigger(processingTime="5 seconds") \
     .start()
 

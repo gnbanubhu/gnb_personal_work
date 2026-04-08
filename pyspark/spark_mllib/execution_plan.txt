@@ -1,0 +1,221 @@
+================================================================================
+SPARK MLLIB EXECUTION PLAN — spark_mllib.py
+================================================================================
+
+--------------------------------------------------------------------------------
+1. SETUP — DATA CREATION & DATAFRAME (Lines 24–37)
+--------------------------------------------------------------------------------
+
+  Raw data (10 rows, 3 columns: size_sqft, num_rooms, price)
+    ↓
+  spark.createDataFrame()
+    ↓
+  df  →  8 partitions (local[*])
+         Schema: [size_sqft: int, num_rooms: int, price: double]
+
+  - No computation yet — DataFrame is lazy.
+  - Catalyst registers the logical plan for df.
+
+--------------------------------------------------------------------------------
+2. TRAIN / TEST SPLIT (Line 40)
+--------------------------------------------------------------------------------
+
+  df.randomSplit([0.8, 0.2], seed=42)
+    ↓
+  train_df  (~8 rows, 80%)     test_df  (~2 rows, 20%)
+
+  Physical Plan:
+    Stage 0: Scan df → apply random split filter per partition
+             → two filtered DataFrames (no shuffle)
+
+  - randomSplit is a narrow transformation — no shuffle needed.
+  - seed=42 ensures reproducible splits across runs.
+  - Actual split: 9 rows train, 1 row test (small dataset — exact counts vary).
+
+--------------------------------------------------------------------------------
+3. PIPELINE DEFINITION (Lines 43–45)
+--------------------------------------------------------------------------------
+
+  Stage 1: VectorAssembler
+    inputCols  = ["size_sqft", "num_rooms"]
+    outputCol  = "features"
+    → Combines two numeric columns into a single DenseVector per row
+    → e.g., (1000, 3) → DenseVector([1000.0, 3.0])
+
+  Stage 2: LinearRegression
+    featuresCol = "features"
+    labelCol    = "price"
+    → Learns coefficients [w1, w2] and intercept b
+    → price = w1 * size_sqft + w2 * num_rooms + b
+
+  Pipeline = [VectorAssembler → LinearRegression]
+  → No computation yet — only the transformation graph is defined.
+
+--------------------------------------------------------------------------------
+4. TRAINING — pipeline.fit(train_df) (Line 48)
+--------------------------------------------------------------------------------
+
+  Logical Plan:
+    Scan(train_df) → VectorAssembler → LinearRegression.fit()
+
+  Physical Plan (multiple internal Spark jobs):
+
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │  JOB A — VectorAssembler transform on train_df                         │
+  │                                                                         │
+  │  Stage 0: Scan train_df → assemble features column                     │
+  │  ┌──────────────────────────────────────────────────────────┐          │
+  │  │  (750,  2, 150000) → features: [750.0,  2.0]            │          │
+  │  │  (1200, 3, 230000) → features: [1200.0, 3.0]            │          │
+  │  │  (1500, 4, 280000) → features: [1500.0, 4.0]            │          │
+  │  │  ...                                                     │          │
+  │  └──────────────────────────────────────────────────────────┘          │
+  └─────────────────────────────────────────────────────────────────────────┘
+         │
+         ▼
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │  JOB B — LinearRegression.fit() — Iterative Gradient Descent           │
+  │                                                                         │
+  │  Each iteration:                                                        │
+  │    Stage N:  Scan assembled train_df                                    │
+  │           →  Compute predictions with current weights                  │
+  │           →  Compute gradients (loss derivatives)          [map]        │
+  │           →  Aggregate gradients across all partitions     [reduce]     │
+  │           →  Update weights: w = w - lr * gradient                     │
+  │                                                                         │
+  │  Repeated until convergence or maxIter reached.                         │
+  │                                                                         │
+  │  Output:                                                                │
+  │    Coefficients : [176.20, -2653.69]                                    │
+  │    Intercept    :  24770.20                                             │
+  │                                                                         │
+  │    price = 176.20 * size_sqft + (-2653.69) * num_rooms + 24770.20      │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+  Shuffle: Yes — gradient aggregation requires reduce across partitions.
+
+--------------------------------------------------------------------------------
+5. PREDICTION — model.transform(test_df) (Line 51)
+--------------------------------------------------------------------------------
+
+  Logical Plan:
+    Scan(test_df) → VectorAssembler → apply learned coefficients → prediction
+
+  Physical Plan:
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │  STAGE 0                                                                │
+  │                                                                         │
+  │  Scan test_df (1 row)                                                   │
+  │    → VectorAssembler: (1000, 3) → features: [1000.0, 3.0]              │
+  │    → Apply model:                                                       │
+  │         prediction = 176.20 * 1000 + (-2653.69) * 3 + 24770.20        │
+  │                    = 176200 - 7961.07 + 24770.20                        │
+  │                    = 193,009.37                                          │
+  │                                                                         │
+  │  No shuffle — purely local narrow transformation per partition.         │
+  └─────────────────────────────────────────────────────────────────────────┘
+         │
+         ▼
+  predictions DataFrame:
+    [size_sqft=1000, num_rooms=3, price=200000.0, prediction=193009.37]
+
+--------------------------------------------------------------------------------
+6. EVALUATION (Lines 59–66)
+--------------------------------------------------------------------------------
+
+  RegressionEvaluator — R² Score (Job triggered by evaluate())
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │  Stage 0: Scan predictions → compute residuals per row                 │
+  │           → aggregate SS_res and SS_tot across partitions  [shuffle]   │
+  │  Result : R² = 1 - (SS_res / SS_tot)                                   │
+  │           = -inf  (only 1 test row — SS_tot = 0, undefined)            │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+  RegressionEvaluator — RMSE (Job triggered by evaluate())
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │  Stage 0: Scan predictions → compute (prediction - price)² per row     │
+  │           → aggregate mean squared error across partitions [shuffle]   │
+  │  Result : RMSE = sqrt(MSE) = $6,990.63                                 │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+--------------------------------------------------------------------------------
+7. JOB SUMMARY
+--------------------------------------------------------------------------------
+
+  Job | Operation                          | Stages | Shuffle | Trigger
+  ----|------------------------------------|---------|---------|---------
+  A   | VectorAssembler on train_df        | 1      | No      | fit()
+  B   | LinearRegression gradient descent  | N*     | Yes     | fit()
+  C   | VectorAssembler + predict test_df  | 1      | No      | show()
+  D   | R² computation                     | 1      | Yes     | evaluate()
+  E   | RMSE computation                   | 1      | Yes     | evaluate()
+
+  * N = number of gradient descent iterations until convergence.
+
+--------------------------------------------------------------------------------
+8. END-TO-END DATA FLOW
+--------------------------------------------------------------------------------
+
+  Raw Data (10 rows)
+      │
+      ▼
+  createDataFrame → df (8 partitions)
+      │
+      ▼
+  randomSplit(0.8/0.2, seed=42)
+      ├── train_df (~9 rows)
+      └── test_df  (~1 row)
+            │
+            ▼ pipeline.fit(train_df)
+  ┌──────────────────────────────────┐
+  │  VectorAssembler                 │
+  │  [size_sqft, num_rooms]          │
+  │       → features (DenseVector)   │
+  └──────────────┬───────────────────┘
+                 │
+                 ▼
+  ┌──────────────────────────────────┐
+  │  LinearRegression.fit()          │
+  │  Iterative gradient descent      │
+  │  → Coefficients: [176.20,-2653.69]│
+  │  → Intercept   :  24770.20       │
+  └──────────────┬───────────────────┘
+                 │
+                 ▼ model.transform(test_df)
+  ┌──────────────────────────────────┐
+  │  VectorAssembler (test_df)       │
+  │  + apply learned weights         │
+  │  → prediction: $193,009.37       │
+  └──────────────┬───────────────────┘
+                 │
+                 ▼
+  ┌──────────────────────────────────┐
+  │  RegressionEvaluator             │
+  │  R²   = -inf  (1 test sample)   │
+  │  RMSE = $6,990.63               │
+  └──────────────────────────────────┘
+
+--------------------------------------------------------------------------------
+9. LEARNED MODEL EQUATION
+--------------------------------------------------------------------------------
+
+  price = 176.20 * size_sqft  +  (-2653.69) * num_rooms  +  24770.20
+
+  Interpretation:
+    - Each additional sq ft  → price increases by $176.20
+    - Each additional room   → price decreases by $2,653.69
+      (rooms are correlated with sqft — multicollinearity effect)
+    - Base price (intercept) → $24,770.20
+
+--------------------------------------------------------------------------------
+10. KEY MLLIB CONCEPTS USED
+--------------------------------------------------------------------------------
+
+  Concept            | Class                | Role
+  -------------------|----------------------|----------------------------------
+  Feature Engineering| VectorAssembler      | Combines columns into feature vector
+  Model              | LinearRegression     | Learns price from features
+  Orchestration      | Pipeline             | Chains assembler + model
+  Evaluation         | RegressionEvaluator  | Measures R² and RMSE on test set
+
+================================================================================

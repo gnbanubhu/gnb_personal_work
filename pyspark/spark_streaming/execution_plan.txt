@@ -1,0 +1,234 @@
+================================================================================
+SPARK STRUCTURED STREAMING EXECUTION PLAN — spark_streaming.py
+================================================================================
+
+--------------------------------------------------------------------------------
+1. SETUP — SPARK SESSION (Lines 15–19)
+--------------------------------------------------------------------------------
+
+  SparkSession.builder
+    .appName("SparkStreamingDemo")
+    .master("local[*]")
+    .config("spark.sql.shuffle.partitions", "4")   ← reduced from default 200
+    .getOrCreate()
+
+  - local[*]  → 1 executor, 8 cores on this machine.
+  - shuffle.partitions = 4 → 4 state store partitions for windowed aggregation.
+    (Default 200 causes FileNotFoundException on macOS local mode with streaming.)
+
+--------------------------------------------------------------------------------
+2. STREAM SOURCE — RATE FORMAT (Lines 22–25)
+--------------------------------------------------------------------------------
+
+  spark.readStream
+    .format("rate")
+    .option("rowsPerSecond", 5)
+    .load()
+
+  Schema: [timestamp: TimestampType, value: LongType]
+
+  - Rate source generates synthetic rows at a fixed rate.
+  - 5 rows/second → 25 rows per 5-second micro-batch trigger.
+  - No external dependency — fully self-contained simulation.
+  - Continuous, unbounded stream — no end condition.
+
+--------------------------------------------------------------------------------
+3. TRANSFORMATIONS (Lines 28–38)
+--------------------------------------------------------------------------------
+
+  STEP 1 — Select + Derive category column (Line 28–32)
+  ───────────────────────────────────────────────────────
+  processed = stream_df.select(
+      col("timestamp"),
+      col("value"),
+      (col("value") % 3).alias("category")   → values: 0, 1, 2
+  )
+
+  - Narrow transformation — no shuffle.
+  - Each row is tagged with a category (0, 1, or 2) based on value % 3.
+
+  Example rows per micro-batch:
+    timestamp              value   category
+    2026-04-07 20:57:30    0       0
+    2026-04-07 20:57:30    1       1
+    2026-04-07 20:57:30    2       2
+    2026-04-07 20:57:30    3       0
+    2026-04-07 20:57:30    4       1
+
+  STEP 2 — Watermark + Windowed Aggregation (Lines 35–38)
+  ────────────────────────────────────────────────────────
+  windowed = processed
+    .withWatermark("timestamp", "10 seconds")
+    .groupBy(window("timestamp", "10 seconds", "5 seconds"), "category")
+    .count()
+
+  Watermark:
+    - Allows up to 10 seconds of late data.
+    - Events older than (max_event_time - 10s) are dropped.
+    - Enables Spark to safely clean up state for expired windows.
+
+  Sliding Window:
+    - Window size     : 10 seconds
+    - Slide interval  : 5 seconds
+    - Each event falls into 2 overlapping windows simultaneously.
+
+  Example windows for event at 20:57:32:
+    Window 1: {20:57:25 → 20:57:35}   (started 5s before)
+    Window 2: {20:57:30 → 20:57:40}   (started at floor boundary)
+
+  Aggregation:
+    - GROUP BY (window, category) → count()
+    - Wide transformation — shuffle required.
+    - State is maintained across micro-batches in HDFSStateStore.
+
+--------------------------------------------------------------------------------
+4. OUTPUT SINK — CONSOLE (Lines 46–51)
+--------------------------------------------------------------------------------
+
+  query = windowed.writeStream
+    .outputMode("update")
+    .format("console")
+    .option("truncate", False)
+    .option("checkpointLocation", "/tmp/spark_streaming_checkpoint")
+    .trigger(processingTime="5 seconds")
+    .start()
+
+  Output Mode — "update":
+    - Only rows that changed in this micro-batch are output.
+    - Suitable for windowed aggregations with watermark.
+    - (append mode not allowed with aggregations without watermark)
+
+  Trigger — processingTime="5 seconds":
+    - Spark processes a new micro-batch every 5 seconds.
+    - If processing takes longer than 5s, next batch starts immediately after.
+
+  Checkpoint Location — /tmp/spark_streaming_checkpoint:
+    - Stores offset logs and state store delta files.
+    - Enables fault tolerance and state commit between micro-batches.
+    - Required for stateful operations (windowed aggregation).
+
+--------------------------------------------------------------------------------
+5. MICRO-BATCH EXECUTION (Per Trigger — Every 5 Seconds)
+--------------------------------------------------------------------------------
+
+  Each micro-batch follows this physical plan:
+
+  ┌──────────────────────────────────────────────────────────────────────────┐
+  │  STAGE 0 — Micro-batch ingestion                                         │
+  │                                                                          │
+  │  Rate Source → generate 25 rows (5 rows/sec × 5 sec trigger)            │
+  │  → select(timestamp, value, value%3 as category)   [Narrow]             │
+  │  → assign rows to sliding windows                  [Narrow]             │
+  │  → partial aggregate per partition                 [map-side combine]   │
+  │                                                                          │
+  │  ════ SHUFFLE ════  (hash partition by (window, category))               │
+  └─────────────────────────────────────────────────────────────────────────-┘
+                                │
+                                ▼
+  ┌──────────────────────────────────────────────────────────────────────────┐
+  │  STAGE 1 — Stateful aggregation + state store commit                     │
+  │                                                                          │
+  │  Shuffle Read → merge with existing state from HDFSStateStore            │
+  │  → final count() per (window, category)                                 │
+  │  → apply watermark: drop windows older than (max_ts - 10s)              │
+  │  → write updated state back to HDFSStateStore (checkpoint)              │
+  │  → emit updated rows to console sink (outputMode=update)                │
+  └──────────────────────────────────────────────────────────────────────────┘
+
+  Batch 0 (first trigger):
+    - Stream just started, no data processed yet → empty output.
+
+  Batch 1 (second trigger, ~5s later):
+    - 25+ rows ingested → assigned to overlapping 10s windows.
+    - category 0, 1, 2 counted per window → output to console.
+
+--------------------------------------------------------------------------------
+6. WINDOWED AGGREGATION — HOW SLIDING WINDOWS WORK
+--------------------------------------------------------------------------------
+
+  rowsPerSecond = 5, trigger = 5s → ~25 rows per batch
+  Window size = 10s, Slide = 5s → each event in 2 windows
+
+  Timeline:
+    t=0s  ────────────────────────────────────────────────────────────────
+          [Window A: t=0  → t=10]
+                [Window B: t=5  → t=15]
+                      [Window C: t=10 → t=20]
+                            [Window D: t=15 → t=25]
+
+  A row arriving at t=7s falls into:
+    → Window A (t=0 → t=10)   ✓
+    → Window B (t=5 → t=15)   ✓
+
+  State Store:
+    - Maintains running count per (window, category) across batches.
+    - Old windows are evicted once watermark passes their end time.
+    - Watermark = max observed timestamp - 10 seconds.
+
+--------------------------------------------------------------------------------
+7. JOB SUMMARY (Per Micro-Batch)
+--------------------------------------------------------------------------------
+
+  Stage | Operation                                  | Shuffle | Type
+  ------|--------------------------------------------|---------|---------
+  0     | Rate source → select → window assign       | No      | Narrow
+  0     | Partial aggregate per partition             | No      | map-side
+  0     | Shuffle write (by window+category key)     | Yes     | Wide
+  1     | Shuffle read → merge with state store      | Yes     | Wide
+  1     | Final count() per (window, category)       | No      | Stateful
+  1     | Watermark eviction → state store commit    | No      | Local
+  1     | Emit updated rows → console                | No      | Sink
+
+  Micro-batches triggered : 3  (over 15 second runtime)
+  Rows generated per batch : ~25 (5 rows/sec × 5 sec)
+  Total rows generated     : ~75
+  State store partitions   : 4  (spark.sql.shuffle.partitions=4)
+
+--------------------------------------------------------------------------------
+8. OUTPUT MODE COMPARISON
+--------------------------------------------------------------------------------
+
+  Mode    | Behavior                              | Use case
+  --------|---------------------------------------|---------------------------
+  append  | Only new final rows emitted           | No aggregation / with watermark
+  update  | Only changed rows emitted per batch   | Aggregations (used here)
+  complete| All rows emitted every batch          | Small aggregation results
+
+  "update" is used here because:
+    - Windows update incrementally as new data arrives.
+    - Emitting only changed windows is efficient.
+    - complete would re-emit all windows every batch (wasteful).
+
+--------------------------------------------------------------------------------
+9. FAULT TOLERANCE — CHECKPOINT & STATE STORE
+--------------------------------------------------------------------------------
+
+  Checkpoint Location: /tmp/spark_streaming_checkpoint
+    ├── offsets/        → tracks which data has been read per batch
+    ├── commits/        → records successfully completed batches
+    └── state/          → HDFSStateStore delta files per partition
+          ├── 0/        → state for partition 0 (window+category counts)
+          ├── 1/        → state for partition 1
+          ├── 2/        → state for partition 2
+          └── 3/        → state for partition 3
+
+  On failure:
+    - Spark reads offsets/ to find last committed batch.
+    - Replays from that point using state/ for stateful operators.
+    - Guarantees exactly-once processing semantics.
+
+--------------------------------------------------------------------------------
+10. FIXES APPLIED VS ORIGINAL
+--------------------------------------------------------------------------------
+
+  Issue 1 — spark.sql.shuffle.partitions = 200 (default)
+    Problem : 200 state store partition dirs created in /tmp → some missing
+              → FileNotFoundException on HDFSStateStore commit
+    Fix     : Set spark.sql.shuffle.partitions = 4
+
+  Issue 2 — No checkpoint location
+    Problem : State store has no stable path to commit delta files
+              → MicroBatchWrite aborts on state commit
+    Fix     : Added .option("checkpointLocation", "/tmp/spark_streaming_checkpoint")
+
+================================================================================

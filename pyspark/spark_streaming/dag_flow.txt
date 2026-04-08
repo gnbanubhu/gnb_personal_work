@@ -1,0 +1,324 @@
+================================================================================
+DAG FLOW — spark_streaming.py
+================================================================================
+
+--------------------------------------------------------------------------------
+STREAM SOURCE (Continuous — Unbounded)
+--------------------------------------------------------------------------------
+
+  Rate Source (rowsPerSecond = 5)
+  ────────────────────────────────
+  Generates synthetic rows indefinitely:
+
+  t=+0s   {timestamp: 20:57:30, value: 0}
+  t=+0.2s {timestamp: 20:57:30, value: 1}
+  t=+0.4s {timestamp: 20:57:30, value: 2}
+  t=+0.6s {timestamp: 20:57:30, value: 3}
+  t=+0.8s {timestamp: 20:57:30, value: 4}
+  t=+1.0s {timestamp: 20:57:31, value: 5}
+  ...     (5 rows every second, ~25 rows per 5s trigger)
+         │
+         ▼
+  stream_df  [timestamp, value]   ← unbounded streaming DataFrame
+
+================================================================================
+TRANSFORMATION DAG (Lazy — Defined Once, Applied Every Micro-Batch)
+================================================================================
+
+         │
+         ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  TRANSFORMATION 1 — select() + derive category        [Narrow]             │
+│                                                                             │
+│  col("value") % 3  →  category (0, 1, or 2)                                │
+│                                                                             │
+│  Input:   {timestamp, value}                                                │
+│  Output:  {timestamp, value, category}                                      │
+│                                                                             │
+│  Example:                                                                   │
+│    {20:57:30, 0}  →  {20:57:30, 0, category=0}                             │
+│    {20:57:30, 1}  →  {20:57:30, 1, category=1}                             │
+│    {20:57:30, 2}  →  {20:57:30, 2, category=2}                             │
+│    {20:57:30, 3}  →  {20:57:30, 3, category=0}                             │
+│    {20:57:30, 4}  →  {20:57:30, 4, category=1}                             │
+│                                                                             │
+│  processed DataFrame = [timestamp, value, category]                         │
+└──────────────────────────────┬──────────────────────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  TRANSFORMATION 2 — withWatermark()                   [Metadata only]      │
+│                                                                             │
+│  .withWatermark("timestamp", "10 seconds")                                  │
+│                                                                             │
+│  - Tracks max observed timestamp across all partitions.                     │
+│  - Watermark threshold = max_timestamp - 10 seconds.                        │
+│  - Events older than threshold are DROPPED (late data policy).              │
+│  - Tells Spark when it is safe to evict old window state.                   │
+│                                                                             │
+│  No physical computation — registers watermark metadata on the plan.        │
+└──────────────────────────────┬──────────────────────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  TRANSFORMATION 3 — groupBy(window, category) + count()  [Wide]            │
+│                                                                             │
+│  window("timestamp", "10 seconds", "5 seconds")                             │
+│    → Window size  : 10 seconds                                              │
+│    → Slide every  : 5 seconds                                               │
+│    → Each event falls into 2 overlapping windows                            │
+│                                                                             │
+│  How windows are assigned per event:                                        │
+│                                                                             │
+│    Event timestamp: 20:57:32                                                │
+│    ┌──────────────────────────────────────────┐                             │
+│    │  Window 1: {20:57:25 → 20:57:35}  ✓      │                             │
+│    │  Window 2: {20:57:30 → 20:57:40}  ✓      │                             │
+│    └──────────────────────────────────────────┘                             │
+│                                                                             │
+│    Event timestamp: 20:57:38                                                │
+│    ┌──────────────────────────────────────────┐                             │
+│    │  Window 1: {20:57:30 → 20:57:40}  ✓      │                             │
+│    │  Window 2: {20:57:35 → 20:57:45}  ✓      │                             │
+│    └──────────────────────────────────────────┘                             │
+│                                                                             │
+│  windowed DataFrame = [(window, category) → count]                          │
+└──────────────────────────────┬──────────────────────────────────────────────┘
+                               │
+                               ▼
+                    writeStream (console sink)
+                    outputMode  = "update"
+                    trigger     = every 5 seconds
+                    checkpoint  = /tmp/spark_streaming_checkpoint
+
+================================================================================
+MICRO-BATCH EXECUTION — PER TRIGGER (Every 5 Seconds)
+================================================================================
+
+  ┌───────────────────────────────────────────────────────────────────────────┐
+  │  MICRO-BATCH SCHEDULER                                                    │
+  │                                                                           │
+  │  Every 5 seconds:                                                         │
+  │    1. Read new offsets from rate source                                   │
+  │    2. Plan a new Spark job for this micro-batch                           │
+  │    3. Execute Stage 0 → Stage 1                                           │
+  │    4. Commit offsets to checkpoint                                        │
+  │    5. Wait for next trigger                                               │
+  └───────────────────────────────────────────────────────────────────────────┘
+
+─────────────────────────────────────────────────────────────────────────────
+BATCH 0  (trigger at t=0s — stream just started)
+─────────────────────────────────────────────────────────────────────────────
+
+  Rate Source → 0 rows (stream warming up)
+                │
+                ▼
+  STAGE 0:  No data to process
+  STAGE 1:  No state to merge
+                │
+                ▼
+  OUTPUT:   Empty batch
+  ┌──────────┬──────────┬───────┐
+  │  window  │ category │ count │
+  ├──────────┼──────────┼───────┤
+  │  (empty) │          │       │
+  └──────────┴──────────┴───────┘
+
+─────────────────────────────────────────────────────────────────────────────
+BATCH 1  (trigger at t=5s — ~25 rows ingested)
+─────────────────────────────────────────────────────────────────────────────
+
+  Rate Source → ~25 rows (5 rows/sec × 5 sec)
+         │
+         ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  STAGE 0  (4 partitions — shuffle.partitions=4)                             │
+│                                                                             │
+│  Step 1: Ingest rows from rate source                                       │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐                   │
+│  │   P0     │  │   P1     │  │   P2     │  │   P3     │                   │
+│  │ rows 0-6 │  │ rows 7-12│  │rows 13-18│  │rows 19-24│                   │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘                   │
+│                                                                             │
+│  Step 2: Apply select() + value%3 → category    [Narrow]                   │
+│  Step 3: Assign rows to sliding windows         [Narrow]                   │
+│          Each row duplicated into 2 window slots                            │
+│  Step 4: Partial count() per (window,category)  [map-side combine]         │
+│                                                                             │
+│                   ════ SHUFFLE WRITE ════                                   │
+│           (hash partition by (window, category) key)                        │
+└──────────────────────────────┬──────────────────────────────────────────────┘
+                               │  Wide (shuffle boundary)
+                               ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  STAGE 1  (4 partitions)                                                    │
+│                                                                             │
+│  Step 1: Shuffle Read → merge with HDFSStateStore (previous counts)        │
+│  ┌──────────────────────────────────────────────────────────────────────┐  │
+│  │  StateStore P0         StateStore P1                                 │  │
+│  │  (empty — batch 1)     (empty — batch 1)                             │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+│  Step 2: Final count() per (window, category)                              │
+│  ┌──────────────────────────────────────────────────────────────────────┐  │
+│  │  {20:57:25→20:57:35} cat=0 → count=1                                │  │
+│  │  {20:57:25→20:57:35} cat=1 → count=1                                │  │
+│  │  {20:57:30→20:57:40} cat=0 → count=9                                │  │
+│  │  {20:57:30→20:57:40} cat=1 → count=9                                │  │
+│  │  {20:57:30→20:57:40} cat=2 → count=9                                │  │
+│  │  {20:57:35→20:57:45} cat=0 → count=16                               │  │
+│  │  {20:57:35→20:57:45} cat=1 → count=16                               │  │
+│  │  {20:57:35→20:57:45} cat=2 → count=16                               │  │
+│  │  {20:57:40→20:57:50} cat=0 → count=8                                │  │
+│  │  {20:57:40→20:57:50} cat=1 → count=8                                │  │
+│  │  {20:57:40→20:57:50} cat=2 → count=7                                │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+│  Step 3: Apply watermark — evict windows older than (max_ts - 10s)        │
+│          No eviction in batch 1 — all windows still active                 │
+│                                                                             │
+│  Step 4: Write updated state to HDFSStateStore (checkpoint)                │
+│  Step 5: Emit all changed rows → console sink  (outputMode=update)         │
+└──────────────────────────────┬──────────────────────────────────────────────┘
+                               │
+                               ▼
+                       ACTION: console.write()
+              (collect updated rows to driver, print batch)
+
+─────────────────────────────────────────────────────────────────────────────
+BATCH 2  (trigger at t=10s — next 25 rows + state from Batch 1)
+─────────────────────────────────────────────────────────────────────────────
+
+  Rate Source → next ~25 rows
+         │
+         ▼
+  STAGE 0: Same as Batch 1 — ingest, select, window assign, partial agg
+                │
+                ▼ shuffle
+  STAGE 1: Merge with StateStore (now has state from Batch 1)
+           → Add new counts on top of existing state
+           → Watermark advances → evict windows past threshold
+           → Write updated state to StateStore
+           → Emit only CHANGED (window, category) rows
+                │
+                ▼
+          ACTION: console.write()
+
+─────────────────────────────────────────────────────────────────────────────
+BATCH 3  (trigger at t=15s — awaitTermination timeout reached)
+─────────────────────────────────────────────────────────────────────────────
+
+  query.awaitTermination(timeout=15)  → timeout reached
+  query.stop()                        → streaming query halted
+  spark.stop()                        → SparkSession closed
+
+================================================================================
+COMPLETE STREAMING DAG SUMMARY
+================================================================================
+
+  Rate Source (∞)
+       │
+       ▼  [every 5s micro-batch]
+  stream_df [timestamp, value]
+       │
+       ▼  Narrow
+  select() + value%3 → category
+  [timestamp, value, category]
+       │
+       ▼  Metadata
+  withWatermark("timestamp", "10 seconds")
+       │
+       ▼  Wide ──────── SHUFFLE ────────────────────────────────────────────┐
+  groupBy(window("timestamp","10s","5s"), category)                         │
+  .count()                                                                  │
+       │                                                                    │
+       │         ┌─────────────────────────────────────────┐               │
+       │         │  HDFSStateStore (per partition)         │◄──────────────┘
+       │         │  /tmp/spark_streaming_checkpoint/state  │
+       │         │  Maintains running window counts        │
+       │         │  across micro-batches                   │
+       │         └─────────────────────┬───────────────────┘
+       │                               │ read+write each batch
+       ▼                               │
+  windowed [(window, category, count)] │
+       │◄──────────────────────────────┘
+       │
+       ▼  outputMode=update (emit only changed rows)
+  writeStream → console sink
+       │
+       ▼  every 5 seconds
+  Batch 0 → empty
+  Batch 1 → 11 rows (3 sliding windows × 3 categories)
+  Batch 2 → updated counts (incremental)
+  ...
+  query.stop() at t=15s
+
+================================================================================
+SLIDING WINDOW TIMELINE
+================================================================================
+
+  Time  ──────────────────────────────────────────────────────────────────────
+        20:57:25   20:57:30   20:57:35   20:57:40   20:57:45   20:57:50
+
+  W1    [═══════════════════]
+                                                          10s window
+  W2              [═══════════════════]
+                                                          10s window (slide 5s)
+  W3                        [═══════════════════]
+                                                          10s window (slide 5s)
+  W4                                  [═══════════════════]
+                                                          10s window (slide 5s)
+
+  Watermark ──────────────────────────────────────────────────────────────────
+    max_ts = 20:57:45  →  watermark = 20:57:35
+    W1 {20:57:25→20:57:35} end ≤ watermark → EVICTED (safe to clean state)
+    W2 {20:57:30→20:57:40} still active
+    W3 {20:57:35→20:57:45} still active
+    W4 {20:57:40→20:57:50} still active
+
+================================================================================
+STATE STORE — CHECKPOINT LAYOUT
+================================================================================
+
+  /tmp/spark_streaming_checkpoint/
+    ├── offsets/
+    │     ├── 0   → batch 0 source offsets (start position)
+    │     ├── 1   → batch 1 source offsets (rows 0–24)
+    │     └── 2   → batch 2 source offsets (rows 25–49)
+    │
+    ├── commits/
+    │     ├── 0   → batch 0 committed successfully
+    │     ├── 1   → batch 1 committed successfully
+    │     └── 2   → batch 2 committed successfully
+    │
+    └── state/
+          └── 0/  (stateful operator 0 = windowed aggregation)
+                ├── 0/   → partition 0 state (window+category counts)
+                ├── 1/   → partition 1 state
+                ├── 2/   → partition 2 state
+                └── 3/   → partition 3 state
+
+================================================================================
+JOB SUMMARY (Per Micro-Batch)
+================================================================================
+
+  Stage | Operation                                  | Shuffle | Stateful
+  ------|--------------------------------------------|---------|---------
+  0     | Rate source ingest (5 rows/sec × 5s)       | No      | No
+  0     | select() + value%3 → category              | No      | No
+  0     | Assign rows to sliding windows             | No      | No
+  0     | Partial count per partition (map-side)     | No      | No
+  0     | Shuffle write (by window+category key)     | Yes     | No
+  1     | Shuffle read + merge with state store      | Yes     | Yes
+  1     | Final count per (window, category)         | No      | Yes
+  1     | Watermark eviction of expired windows      | No      | Yes
+  1     | State store commit (checkpoint write)      | No      | Yes
+  1     | Emit updated rows → console (update mode)  | No      | No
+
+  Micro-batches executed : 3   (15 second runtime / 5 second trigger)
+  Rows generated total   : ~75 (5 rows/sec × 15 sec)
+  State partitions       : 4   (spark.sql.shuffle.partitions=4)
+  Overlapping windows    : 2   (each event counted in 2 windows)
+  Categories per window  : 3   (value % 3 → 0, 1, 2)
+
+================================================================================

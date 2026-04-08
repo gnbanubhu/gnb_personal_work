@@ -10,7 +10,7 @@ Usage:
 """
 
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, count, lit, union
+from pyspark.sql.functions import col, count, lit
 
 spark = SparkSession.builder \
     .appName("SparkGraphXDemo") \

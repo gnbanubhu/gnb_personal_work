@@ -1,0 +1,270 @@
+================================================================================
+SPARK GRAPHX EXECUTION PLAN — spark_graphx.py
+================================================================================
+
+NOTE: GraphX is Scala-only. This script simulates graph computations
+(degree centrality, relationship filtering) using PySpark DataFrames.
+
+--------------------------------------------------------------------------------
+1. SETUP — VERTICES & EDGES DataFrames (Lines 22–40)
+--------------------------------------------------------------------------------
+
+  Vertices (6 nodes):
+    spark.createDataFrame([...6 rows...], ["id", "name"])
+    Schema: [id: int, name: string]
+    Partitions: 8 (local[*])
+
+  Edges (7 connections):
+    spark.createDataFrame([...7 rows...], ["src", "dst", "relationship"])
+    Schema: [src: int, dst: int, relationship: string]
+    Partitions: 8 (local[*])
+
+  Graph structure:
+    Alice(1) ──friend──►   Bob(2)
+    Alice(1) ──colleague►  Charlie(3)
+    Bob(2)   ──friend──►   Diana(4)
+    Charlie(3)──colleague► Diana(4)
+    Diana(4) ──friend──►   Eve(5)
+    Eve(5)   ──colleague►  Frank(6)
+    Alice(1) ──friend──►   Eve(5)
+
+  - Both DataFrames are lazy — no computation until an action is called.
+
+--------------------------------------------------------------------------------
+2. ACTION 1 — vertices.show()  (Line 45)
+--------------------------------------------------------------------------------
+
+  Logical Plan:
+    Scan(vertices) → collect → show
+
+  Physical Plan:
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │  STAGE 0                                                                │
+  │  Scan vertices DataFrame (6 rows, 8 partitions)                         │
+  │  → collect to driver → print                                            │
+  │  No shuffle needed                                                      │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+  Job 1 → 1 Stage, 0 shuffles.
+
+--------------------------------------------------------------------------------
+3. ACTION 2 — edges.show()  (Line 50)
+--------------------------------------------------------------------------------
+
+  Logical Plan:
+    Scan(edges) → collect → show
+
+  Physical Plan:
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │  STAGE 0                                                                │
+  │  Scan edges DataFrame (7 rows, 8 partitions)                            │
+  │  → collect to driver → print                                            │
+  │  No shuffle needed                                                      │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+  Job 2 → 1 Stage, 0 shuffles.
+
+--------------------------------------------------------------------------------
+4. DEGREE CENTRALITY — Transformations (Lines 53–61)
+--------------------------------------------------------------------------------
+
+  STEP 1 — Out-degree (how many edges each node sends)  (Line 53)
+  ──────────────────────────────────────────────────────
+  out_degree = edges
+    .groupBy("src")
+    .agg(count("*").alias("out_degree"))
+    .withColumnRenamed("src", "id")
+
+  Physical Plan:
+    Stage 0: Scan edges → partial count per partition  [map-side combine]
+             ════ SHUFFLE ════  (hash partition by "src")
+    Stage 1: Final count per src → out_degree DataFrame
+
+  Result:
+    id=1 (Alice)   → out_degree=3
+    id=2 (Bob)     → out_degree=1
+    id=3 (Charlie) → out_degree=1
+    id=4 (Diana)   → out_degree=1
+    id=5 (Eve)     → out_degree=1
+
+  STEP 2 — In-degree (how many edges each node receives)  (Line 54)
+  ──────────────────────────────────────────────────────
+  in_degree = edges
+    .groupBy("dst")
+    .agg(count("*").alias("in_degree"))
+    .withColumnRenamed("dst", "id")
+
+  Physical Plan:
+    Stage 0: Scan edges → partial count per partition  [map-side combine]
+             ════ SHUFFLE ════  (hash partition by "dst")
+    Stage 1: Final count per dst → in_degree DataFrame
+
+  Result:
+    id=2 (Bob)     → in_degree=1
+    id=3 (Charlie) → in_degree=1
+    id=4 (Diana)   → in_degree=2
+    id=5 (Eve)     → in_degree=2
+    id=6 (Frank)   → in_degree=1
+
+  STEP 3 — Join vertices + out_degree + in_degree  (Lines 56–59)
+  ──────────────────────────────────────────────────────────────
+  degree = vertices
+    .join(out_degree, "id", "left")     ← left join (Alice has no in_degree)
+    .join(in_degree,  "id", "left")     ← left join (Frank has no out_degree)
+    .fillna(0, subset=["out_degree", "in_degree"])
+
+  Join Strategy (Catalyst auto-selects BroadcastHashJoin):
+    - out_degree (5 rows) → broadcast to all partitions
+    - in_degree  (5 rows) → broadcast to all partitions
+    - vertices   (6 rows) → probed against both broadcasts
+    - No shuffle needed for either join
+
+  STEP 4 — Compute total_degree  (Line 61)
+  ─────────────────────────────────────────
+  degree = degree.withColumn("total_degree", col("out_degree") + col("in_degree"))
+
+  - Narrow transformation — per-row arithmetic, no shuffle.
+
+--------------------------------------------------------------------------------
+5. ACTION 3 — Degree Centrality show()  (Lines 66–68)
+--------------------------------------------------------------------------------
+
+  Logical Plan:
+    Scan(vertices) → BroadcastJoin(out_degree) → BroadcastJoin(in_degree)
+    → fillna → withColumn(total_degree) → orderBy(total_degree DESC) → show
+
+  Physical Plan:
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │  STAGE 0                                                                │
+  │  Scan edges → partial count by "src"          [map-side combine]        │
+  │             ════ SHUFFLE ════                                            │
+  │  STAGE 1                                                                │
+  │  Final count by "src" → out_degree                                      │
+  └─────────────────────────────────────────────────────────────────────────┘
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │  STAGE 2                                                                │
+  │  Scan edges → partial count by "dst"          [map-side combine]        │
+  │             ════ SHUFFLE ════                                            │
+  │  STAGE 3                                                                │
+  │  Final count by "dst" → in_degree                                       │
+  └─────────────────────────────────────────────────────────────────────────┘
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │  STAGE 4                                                                │
+  │  Scan vertices                                                          │
+  │  → BroadcastHashJoin(out_degree)    [no shuffle — broadcast]            │
+  │  → BroadcastHashJoin(in_degree)     [no shuffle — broadcast]            │
+  │  → fillna(0) → withColumn(total_degree)                                 │
+  │             ════ SHUFFLE ════  (range partition for global sort)         │
+  │  STAGE 5                                                                │
+  │  Sort(total_degree DESC) → collect → show                               │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+  Job 3 → 6 Stages, 3 shuffles (2 groupBy + 1 sort).
+
+  Output:
+    Alice   out=3  in=0  total=3  (top connector — initiates most edges)
+    Diana   out=1  in=2  total=3  (high receiver)
+    Eve     out=1  in=2  total=3  (high receiver)
+    Bob     out=1  in=1  total=2
+    Charlie out=1  in=1  total=2
+    Frank   out=0  in=1  total=1  (leaf node — receives only)
+
+--------------------------------------------------------------------------------
+6. ACTION 4 — degree.orderBy().first()  (Line 71)
+--------------------------------------------------------------------------------
+
+  Logical Plan:
+    Recompute degree DAG → orderBy(total_degree DESC) → take(1)
+
+  Physical Plan:
+    Re-runs Stages 0–4 (no caching) → Sort → driver takes first row.
+
+  Job 4 → 6 Stages, 3 shuffles (full recomputation — no cache).
+
+  Result:  top = {name: "Alice", total_degree: 3}
+
+  NOTE: degree DataFrame is recomputed because it was not cached.
+  Adding .cache() on degree after line 61 would avoid this recomputation.
+
+--------------------------------------------------------------------------------
+7. ACTION 5 — Friend Connections show()  (Lines 78–84)
+--------------------------------------------------------------------------------
+
+  Logical Plan:
+    Filter(edges, relationship == "friend")
+    → Join(vertices [src_name], src == id)
+    → Join(vertices [dst_name], dst == id)
+    → select(src_name, dst_name, relationship) → show
+
+  Physical Plan:
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │  STAGE 0                                                                │
+  │  Scan edges → filter(relationship == "friend")   [predicate pushdown]   │
+  │    Remaining: 4 rows (friend edges only)                                │
+  │                                                                         │
+  │  Scan vertices → rename name → src_name                                 │
+  │  → BroadcastHashJoin on (src == id)              [no shuffle]           │
+  │                                                                         │
+  │  Scan vertices → rename name → dst_name                                 │
+  │  → BroadcastHashJoin on (dst == id)              [no shuffle]           │
+  │                                                                         │
+  │  → select(src_name, dst_name, relationship)                             │
+  │  → collect → show                                                       │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+  Job 5 → 1 Stage, 0 shuffles.
+  Catalyst applies:
+    - Predicate pushdown → filter before join (only 4 rows join, not 7)
+    - BroadcastHashJoin → vertices (6 rows) broadcast twice (no shuffle)
+
+  Output:
+    Alice → Bob      (friend)
+    Bob   → Diana    (friend)
+    Diana → Eve      (friend)
+    Alice → Eve      (friend)
+
+--------------------------------------------------------------------------------
+8. JOB SUMMARY
+--------------------------------------------------------------------------------
+
+  Job | Action                          | Stages | Shuffles | Catalyst
+  ----|----------------------------------|--------|----------|-----------------
+  1   | vertices.show()                 | 1      | 0        | None
+  2   | edges.show()                    | 1      | 0        | None
+  3   | degree centrality .show()       | 6      | 3        | BroadcastJoin x2
+                                                              + partial agg
+                                                              + predicate push
+  4   | degree.first()                  | 6      | 3        | Full recompute
+                                                              (no cache)
+  5   | friend connections .show()      | 1      | 0        | BroadcastJoin x2
+                                                              + predicate push
+
+--------------------------------------------------------------------------------
+9. CATALYST OPTIMIZATIONS APPLIED
+--------------------------------------------------------------------------------
+
+  Optimization          | Applied In    | Benefit
+  ----------------------|---------------|--------------------------------------
+  BroadcastHashJoin     | Jobs 3, 4, 5  | vertices(6), out_degree(5),
+                        |               | in_degree(5) all broadcast → 0 shuffle
+  Predicate Pushdown    | Job 5         | filter(relationship=friend) before join
+                        |               | → only 4 rows joined, not 7
+  Partial Aggregation   | Jobs 3, 4     | groupBy count pre-aggregated per
+                        |               | partition before shuffle
+  Column Pruning        | All jobs      | Only required columns passed through
+
+--------------------------------------------------------------------------------
+10. OPTIMIZATION OPPORTUNITY
+--------------------------------------------------------------------------------
+
+  degree DataFrame is fully recomputed in Job 4 (degree.first()).
+  Adding .cache() after line 61 eliminates the recomputation:
+
+    degree = degree.withColumn("total_degree", col("out_degree") + col("in_degree"))
+    degree.cache()                    ← add this line
+
+  With cache:
+    Job 3  → computes and caches degree
+    Job 4  → reads from cache → sort → first()  (no recomputation)
+
+================================================================================

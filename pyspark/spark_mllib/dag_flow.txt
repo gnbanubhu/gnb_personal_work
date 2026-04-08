@@ -1,0 +1,214 @@
+================================================================================
+DAG FLOW — spark_mllib.py
+================================================================================
+
+--------------------------------------------------------------------------------
+RAW DATA (10 rows — driver memory)
+--------------------------------------------------------------------------------
+
+  (750,  2, 150000.0)       (1800, 4, 330000.0)
+  (1000, 3, 200000.0)       (2000, 4, 370000.0)
+  (1200, 3, 230000.0)       (2500, 5, 450000.0)
+  (1500, 4, 280000.0)       (3000, 5, 540000.0)
+  (1100, 3, 210000.0)       (1600, 4, 295000.0)
+         │
+         ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  spark.createDataFrame()                                                    │
+│  Schema: [size_sqft: int, num_rooms: int, price: double]                    │
+│  8 partitions (local[*])                                                    │
+└──────────────────────────────┬──────────────────────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  df.randomSplit([0.8, 0.2], seed=42)       ← Narrow — no shuffle           │
+│                                                                             │
+│  Each partition filters rows by random threshold per seed                  │
+│  ┌───────────────────────┐    ┌───────────────────────┐                    │
+│  │  train_df  (~9 rows)  │    │  test_df   (~1 row)   │                    │
+│  │  80% of data          │    │  20% of data          │                    │
+│  └──────────┬────────────┘    └──────────┬────────────┘                    │
+└─────────────┼───────────────────────────-┼────────────────────────────────-┘
+              │                            │
+              │                            └──────────────────────────┐
+              ▼                                                       │
+                                                                      │
+================================================================================
+TRAINING PHASE — pipeline.fit(train_df)
+================================================================================
+              │
+              ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  JOB A — STAGE 0                                                            │
+│  VectorAssembler.transform(train_df)       ← Narrow — no shuffle           │
+│                                                                             │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │
+│  │ P0           │  │ P1           │  │ P2           │  │ P3 ...       │   │
+│  │ (750,2)      │  │ (1200,3)     │  │ (1800,4)     │  │ (3000,5)     │   │
+│  │ → [750, 2]   │  │ → [1200, 3]  │  │ → [1800, 4]  │  │ → [3000, 5]  │   │
+│  └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘   │
+│                                                                             │
+│  Output column "features": DenseVector([size_sqft, num_rooms])             │
+└──────────────────────────────┬──────────────────────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  JOB B — LinearRegression.fit()  (Iterative Gradient Descent)               │
+│                                                                             │
+│  Iteration 1:                                                               │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  STAGE N                                                            │   │
+│  │  Scan assembled train_df                                            │   │
+│  │  → compute ŷ = w1*size + w2*rooms + b  (current weights)           │   │
+│  │  → compute loss: (ŷ - price)²                                       │   │
+│  │  → compute local gradients ∂L/∂w1, ∂L/∂w2  per partition  [map]   │   │
+│  │                                                                     │   │
+│  │  ════ SHUFFLE ════  (aggregate gradients across all partitions)     │   │
+│  │                                                                     │   │
+│  │  → sum gradients globally                                  [reduce] │   │
+│  │  → update weights: w = w - learning_rate * gradient                │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                               │                                             │
+│                    ┌──────────┴──────────┐                                  │
+│                    │  Converged? NO      │ → repeat next iteration          │
+│                    │  Converged? YES     │ → exit loop                      │
+│                    └─────────────────────┘                                  │
+│                                                                             │
+│  Final Learned Parameters:                                                  │
+│    Coefficients : [176.20, -2653.69]                                        │
+│    Intercept    :  24770.20                                                 │
+│                                                                             │
+│    price = 176.20 * size_sqft  +  (-2653.69) * num_rooms  +  24770.20      │
+└──────────────────────────────┬──────────────────────────────────────────────┘
+                               │
+                               ▼
+                    PipelineModel (fitted)
+                    [VectorAssemblerModel → LinearRegressionModel]
+
+================================================================================
+PREDICTION PHASE — model.transform(test_df)
+================================================================================
+                                                        │
+                                           ─────────────┘  (test_df flows in)
+                                                        │
+                                                        ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  JOB C — STAGE 0                                                            │
+│  VectorAssembler.transform(test_df)        ← Narrow — no shuffle           │
+│                                                                             │
+│  ┌──────────────────────────────────────────────────┐                      │
+│  │  (1000, 3, 200000.0)                             │                      │
+│  │   → features: DenseVector([1000.0, 3.0])         │                      │
+│  └──────────────────────────────────────────────────┘                      │
+│                                                                             │
+│  Apply learned model (no shuffle — purely local):                          │
+│                                                                             │
+│  prediction = 176.20 × 1000  +  (-2653.69) × 3  +  24770.20               │
+│             = 176,200.00     +  (-7,961.07)      +  24,770.20              │
+│             = 193,009.13  ≈  $193,009.37                                   │
+│                                                                             │
+│  Output predictions DataFrame:                                             │
+│  ┌──────────────────────────────────────────────────────────────────────┐  │
+│  │ size_sqft │ num_rooms │    price   │       prediction                │  │
+│  │   1000    │     3     │ 200000.0   │  193009.37                      │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+└──────────────────────────────┬──────────────────────────────────────────────┘
+                               │
+                               ▼
+                          ACTION: show()
+                     (collect to driver, print)
+
+================================================================================
+EVALUATION PHASE — RegressionEvaluator
+================================================================================
+                               │
+              ┌────────────────┴─────────────────┐
+              │                                  │
+              ▼                                  ▼
+┌─────────────────────────────┐    ┌──────────────────────────────────────────┐
+│  JOB D — R² Evaluation      │    │  JOB E — RMSE Evaluation                 │
+│                             │    │                                          │
+│  STAGE 0:                   │    │  STAGE 0:                                │
+│  Scan predictions           │    │  Scan predictions                        │
+│  → residual²  per row       │    │  → (prediction - price)² per row         │
+│  → SS_res, SS_tot  [map]    │    │  → mean squared error         [map]      │
+│                             │    │                                          │
+│  ════ SHUFFLE ════          │    │  ════ SHUFFLE ════                       │
+│  → aggregate globally       │    │  → aggregate globally                    │
+│    [reduce]                 │    │    [reduce]                              │
+│                             │    │                                          │
+│  R² = 1-(SS_res/SS_tot)     │    │  RMSE = √(MSE)                          │
+│     = -inf                  │    │       = $6,990.63                        │
+│  (only 1 test row →         │    │                                          │
+│   SS_tot = 0, undefined)    │    │                                          │
+└─────────────────────────────┘    └──────────────────────────────────────────┘
+
+================================================================================
+COMPLETE DAG SUMMARY
+================================================================================
+
+  Raw Data (10 rows)
+      │
+      ▼
+  createDataFrame [df]
+      │
+      ▼
+  randomSplit(0.8/0.2)  ← Narrow
+      ├── train_df (~9 rows) ──────────────────────────────────────────┐
+      └── test_df  (~1 row)  ─────────────────────────────────────┐   │
+                                                                  │   │
+                                                    TRAINING ─────│───┘
+                                                                  │
+  JOB A: VectorAssembler(train_df)   ← Narrow, no shuffle        │
+      │                                                           │
+      ▼                                                           │
+  JOB B: LinearRegression.fit()      ← Shuffle (gradient agg)    │
+      │  [iterative — one job per iteration]                      │
+      ▼                                                           │
+  PipelineModel (fitted)                                          │
+      │                                                           │
+      │                          PREDICTION ─────────────────────┘
+      │
+  JOB C: model.transform(test_df)    ← Narrow, no shuffle
+      │  VectorAssembler + apply weights
+      ▼
+  predictions DataFrame
+      │
+      ├── ACTION: show()
+      │
+      ├── JOB D: R²   evaluation     ← Shuffle (global aggregate)
+      │          Result: -inf
+      │
+      └── JOB E: RMSE evaluation     ← Shuffle (global aggregate)
+                 Result: $6,990.63
+
+================================================================================
+JOB SUMMARY
+================================================================================
+
+  Job | Phase      | Operation                        | Shuffle | Stages
+  ----|------------|----------------------------------|---------|-------
+  A   | Training   | VectorAssembler on train_df      | No      | 1
+  B   | Training   | LinearRegression gradient descent | Yes     | N*
+  C   | Prediction | VectorAssembler + apply model    | No      | 1
+  D   | Evaluation | R² aggregation                   | Yes     | 1
+  E   | Evaluation | RMSE aggregation                 | Yes     | 1
+
+  * N = number of gradient descent iterations until convergence.
+
+================================================================================
+SHUFFLE BOUNDARIES
+================================================================================
+
+  Operation                     | Shuffle Type        | Reason
+  ------------------------------|---------------------|------------------------
+  Gradient aggregation (Job B)  | AllReduce           | Sum gradients globally
+  R² aggregation (Job D)        | Reduce              | Sum SS_res, SS_tot
+  RMSE aggregation (Job E)      | Reduce              | Sum squared errors
+
+  No shuffle in:
+    - randomSplit    → local filter per partition
+    - VectorAssembler → local column combination
+    - model.transform → local matrix multiply per row
+
+================================================================================

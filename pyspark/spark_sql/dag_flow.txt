@@ -1,0 +1,236 @@
+================================================================================
+DAG FLOW — spark_sql.py
+================================================================================
+
+--------------------------------------------------------------------------------
+DATA SOURCES
+--------------------------------------------------------------------------------
+
+  employees (7 rows)                      departments (3 rows)
+  ──────────────────                      ────────────────────
+  (1, Alice,   Engineering, 95000)        (Engineering, San Francisco)
+  (2, Bob,     Marketing,   72000)        (Marketing,   New York)
+  (3, Charlie, Engineering, 88000)        (HR,          Chicago)
+  (4, Diana,   HR,          65000)
+  (5, Eve,     Marketing,   78000)
+  (6, Frank,   Engineering, 102000)
+  (7, Grace,   HR,          68000)
+         │                                        │
+         ▼                                        ▼
+  spark.createDataFrame()              spark.createDataFrame()
+         │                                        │
+         ▼                                        ▼
+     emp_df                                   dept_df
+  TempView: "employees"                TempView: "departments"
+  8 partitions (local[*])              8 partitions (local[*])
+
+================================================================================
+JOB 1 — SELECT * FROM employees ORDER BY salary DESC
+================================================================================
+
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │  STAGE 0                                                                │
+  │                                                                         │
+  │  Scan TempView "employees"                                              │
+  │  ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ... ┌────────┐           │
+  │  │  P0    │ │  P1    │ │  P2    │ │  P3    │     │  P7    │           │
+  │  │ Alice  │ │  Bob   │ │Charlie │ │ Diana  │     │ Grace  │           │
+  │  └────────┘ └────────┘ └────────┘ └────────┘     └────────┘           │
+  │                                                                         │
+  │                   ════ SHUFFLE WRITE ════                               │
+  │             (range partition by salary for global sort)                 │
+  └──────────────────────────────┬──────────────────────────────────────────┘
+                                 │  Wide (shuffle boundary)
+                                 ▼
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │  STAGE 1                                                                │
+  │                                                                         │
+  │  Shuffle Read → Sort(salary DESC)                                       │
+  │  ┌──────────────────────────────────────────────┐                      │
+  │  │  Frank       Engineering   102000            │                      │
+  │  │  Alice       Engineering    95000            │                      │
+  │  │  Charlie     Engineering    88000            │                      │
+  │  │  Eve         Marketing      78000            │                      │
+  │  │  Bob         Marketing      72000            │                      │
+  │  │  Grace       HR             68000            │                      │
+  │  │  Diana       HR             65000            │                      │
+  │  └──────────────────────────────────────────────┘                      │
+  └──────────────────────────────┬──────────────────────────────────────────┘
+                                 │
+                                 ▼
+                          ACTION: show()
+                     (collect to driver, print)
+
+================================================================================
+JOB 2 — GROUP BY department + AVG + SUM + COUNT ORDER BY avg_salary DESC
+================================================================================
+
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │  STAGE 0                                                                │
+  │                                                                         │
+  │  Scan "employees" → Partial Aggregate per partition (map-side combine)  │
+  │                                                                         │
+  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐                 │
+  │  │ P0           │  │ P1           │  │ P2 ...       │                 │
+  │  │ Eng:  95000  │  │ Mkt:  72000  │  │ Eng:  88000  │                 │
+  │  │ count=1      │  │ count=1      │  │ count=1      │                 │
+  │  └──────────────┘  └──────────────┘  └──────────────┘                 │
+  │                                                                         │
+  │                   ════ SHUFFLE WRITE ════                               │
+  │              (hash partition by department key)                         │
+  └──────────────────────────────┬──────────────────────────────────────────┘
+                                 │  Wide (shuffle boundary)
+                                 ▼
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │  STAGE 1                                                                │
+  │                                                                         │
+  │  Shuffle Read → Final HashAggregate(GROUP BY department)               │
+  │  ┌──────────────────────────────────────────────────────────┐          │
+  │  │  Engineering  count=3  avg=95000.0  sum=285000           │          │
+  │  │  Marketing    count=2  avg=75000.0  sum=150000           │          │
+  │  │  HR           count=2  avg=66500.0  sum=133000           │          │
+  │  └──────────────────────────────────────────────────────────┘          │
+  │                                                                         │
+  │                   ════ SHUFFLE WRITE ════                               │
+  │              (range partition by avg_salary for sort)                   │
+  └──────────────────────────────┬──────────────────────────────────────────┘
+                                 │  Wide (shuffle boundary)
+                                 ▼
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │  STAGE 2                                                                │
+  │                                                                         │
+  │  Shuffle Read → Sort(avg_salary DESC)                                   │
+  │  ┌──────────────────────────────────────────────────────────┐          │
+  │  │  Engineering    3    95000.0    285000                    │          │
+  │  │  Marketing      2    75000.0    150000                    │          │
+  │  │  HR             2    66500.0    133000                    │          │
+  │  └──────────────────────────────────────────────────────────┘          │
+  └──────────────────────────────┬──────────────────────────────────────────┘
+                                 │
+                                 ▼
+                          ACTION: show()
+                     (collect to driver, print)
+
+================================================================================
+JOB 3 — JOIN employees + departments ORDER BY salary DESC
+================================================================================
+
+  emp_df (8 partitions)           dept_df (3 rows — tiny!)
+         │                               │
+         │                               ▼
+         │                    ┌─────────────────────────┐
+         │                    │  BROADCAST              │
+         │                    │  Catalyst auto-selects  │
+         │                    │  BroadcastHashJoin      │
+         │                    │  dept_df → broadcast    │
+         │                    │  to ALL partitions      │
+         │                    └────────────┬────────────┘
+         │                                 │
+         ▼                                 ▼
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │  STAGE 0                                                                │
+  │                                                                         │
+  │  Scan "employees" + BroadcastHashJoin (NO shuffle for join)            │
+  │                                                                         │
+  │  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐           │
+  │  │ P0             │  │ P1             │  │ P2 ...         │           │
+  │  │ Alice          │  │ Bob            │  │ Charlie        │           │
+  │  │ + San Francisco│  │ + New York     │  │ + San Francisco│           │
+  │  └────────────────┘  └────────────────┘  └────────────────┘           │
+  │                                                                         │
+  │                   ════ SHUFFLE WRITE ════                               │
+  │              (range partition by salary for sort)                       │
+  └──────────────────────────────┬──────────────────────────────────────────┘
+                                 │  Wide (shuffle boundary)
+                                 ▼
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │  STAGE 1                                                                │
+  │                                                                         │
+  │  Shuffle Read → Sort(salary DESC)                                       │
+  │  ┌──────────────────────────────────────────────────────────┐          │
+  │  │  Frank    Engineering  102000  San Francisco             │          │
+  │  │  Alice    Engineering   95000  San Francisco             │          │
+  │  │  Charlie  Engineering   88000  San Francisco             │          │
+  │  │  Eve      Marketing     78000  New York                  │          │
+  │  │  Bob      Marketing     72000  New York                  │          │
+  │  │  Grace    HR            68000  Chicago                   │          │
+  │  │  Diana    HR            65000  Chicago                   │          │
+  │  └──────────────────────────────────────────────────────────┘          │
+  └──────────────────────────────┬──────────────────────────────────────────┘
+                                 │
+                                 ▼
+                          ACTION: show()
+                     (collect to driver, print)
+
+================================================================================
+JOB 4 — WHERE salary > 80000 ORDER BY salary DESC
+================================================================================
+
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │  STAGE 0                                                                │
+  │                                                                         │
+  │  Scan "employees" → Filter(salary > 80000)  ← predicate pushdown       │
+  │  Filter applied per partition BEFORE shuffle                            │
+  │                                                                         │
+  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌───────────┐  │
+  │  │ P0           │  │ P1           │  │ P2           │  │ P3 ...    │  │
+  │  │ Alice 95000✓ │  │ Bob  72000 ✗ │  │Charlie 88000✓│  │ (empty)   │  │
+  │  └──────────────┘  └──────────────┘  └──────────────┘  └───────────┘  │
+  │   → passes filter    → filtered out    → passes filter   → filtered out │
+  │                                                                         │
+  │  Remaining: Alice(95000), Charlie(88000), Frank(102000)                 │
+  │                                                                         │
+  │                   ════ SHUFFLE WRITE ════                               │
+  │              (range partition by salary for sort)                       │
+  └──────────────────────────────┬──────────────────────────────────────────┘
+                                 │  Wide (shuffle boundary)
+                                 ▼
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │  STAGE 1                                                                │
+  │                                                                         │
+  │  Shuffle Read → Sort(salary DESC)                                       │
+  │  ┌──────────────────────────────────────────────────────────┐          │
+  │  │  Frank    Engineering   102000                           │          │
+  │  │  Alice    Engineering    95000                           │          │
+  │  │  Charlie  Engineering    88000                           │          │
+  │  └──────────────────────────────────────────────────────────┘          │
+  └──────────────────────────────┬──────────────────────────────────────────┘
+                                 │
+                                 ▼
+                          ACTION: show()
+                     (collect to driver, print)
+
+================================================================================
+COMPLETE DAG SUMMARY
+================================================================================
+
+  TempView "employees"  ──────────────────────────────────────────┐
+    │                                                              │
+    ├── Job 1: Scan → [Shuffle] → Sort(salary)    → show()        │
+    │                                                              │
+    ├── Job 2: Scan → PartialAgg → [Shuffle]                      │
+    │               → HashAgg(dept) → [Shuffle]                   │
+    │               → Sort(avg_salary)            → show()        │
+    │                                                              │
+    ├── Job 3: Scan ──────────────────────────────────────────────┤
+    │          + BroadcastJoin(dept_df)                            │
+    │          → [Shuffle] → Sort(salary)         → show()        │
+    │                                                              │
+    └── Job 4: Scan → Filter(salary>80000)                        │
+                    → [Shuffle] → Sort(salary)    → show()        │
+                                                                   │
+  TempView "departments" (broadcast — no shuffle join) ───────────┘
+
+================================================================================
+CATALYST OPTIMIZATIONS APPLIED
+================================================================================
+
+  Optimization          | Applied In  | Benefit
+  ----------------------|-------------|----------------------------------------
+  Predicate Pushdown    | Job 4       | Filter before shuffle — less data moved
+  Partial Aggregation   | Job 2       | Pre-agg per partition — less shuffle data
+  BroadcastHashJoin     | Job 3       | Eliminates shuffle join for small table
+  Column Pruning        | All Jobs    | Only required columns read at each stage
+  Range Partitioning    | All Jobs    | Efficient global sort via single shuffle
+
+================================================================================
