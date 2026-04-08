@@ -1,0 +1,354 @@
+================================================================================
+DAG FLOW — spark_graphx.py
+================================================================================
+
+--------------------------------------------------------------------------------
+DATA SOURCES
+--------------------------------------------------------------------------------
+
+  VERTICES (6 nodes)                    EDGES (7 connections)
+  ──────────────────                    ─────────────────────────────────
+  (1, "Alice")                          (1, 2, "friend")
+  (2, "Bob")                            (1, 3, "colleague")
+  (3, "Charlie")                        (2, 4, "friend")
+  (4, "Diana")                          (3, 4, "colleague")
+  (5, "Eve")                            (4, 5, "friend")
+  (6, "Frank")                          (5, 6, "colleague")
+                                        (1, 5, "friend")
+         │                                      │
+         ▼                                      ▼
+  spark.createDataFrame()            spark.createDataFrame()
+         │                                      │
+         ▼                                      ▼
+     vertices DataFrame                     edges DataFrame
+  [id, name] — 8 partitions          [src, dst, relationship] — 8 partitions
+
+--------------------------------------------------------------------------------
+GRAPH STRUCTURE
+--------------------------------------------------------------------------------
+
+           Alice (1)
+          /    |    \
+    friend  colleague  friend
+        /      |        \
+     Bob(2) Charlie(3)  Eve(5)
+       |         |       |    \
+    friend   colleague  coll.  (incoming
+       |         |       |      from Alice)
+    Diana(4)──colleague──┘      │
+       |                      Frank(6)
+    friend
+       |
+     Eve(5) ◄── also from Alice
+
+================================================================================
+JOB 1 — vertices.show()
+================================================================================
+
+  vertices DataFrame
+       │
+       ▼
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │  STAGE 0: Scan vertices (6 rows, 8 partitions)                          │
+  │  No transformation — direct collect                                     │
+  │  No shuffle                                                             │
+  └──────────────────────────────┬──────────────────────────────────────────┘
+                                 │
+                                 ▼
+                          ACTION: show()
+              ┌────────────────────────┐
+              │  id │  name            │
+              │   1 │  Alice           │
+              │   2 │  Bob             │
+              │   3 │  Charlie         │
+              │   4 │  Diana           │
+              │   5 │  Eve             │
+              │   6 │  Frank           │
+              └────────────────────────┘
+
+================================================================================
+JOB 2 — edges.show()
+================================================================================
+
+  edges DataFrame
+       │
+       ▼
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │  STAGE 0: Scan edges (7 rows, 8 partitions)                             │
+  │  No transformation — direct collect                                     │
+  │  No shuffle                                                             │
+  └──────────────────────────────┬──────────────────────────────────────────┘
+                                 │
+                                 ▼
+                          ACTION: show()
+              ┌──────────────────────────────────┐
+              │ src │ dst │ relationship          │
+              │   1 │   2 │ friend               │
+              │   1 │   3 │ colleague            │
+              │   2 │   4 │ friend               │
+              │   3 │   4 │ colleague            │
+              │   4 │   5 │ friend               │
+              │   5 │   6 │ colleague            │
+              │   1 │   5 │ friend               │
+              └──────────────────────────────────┘
+
+================================================================================
+DEGREE CENTRALITY DAG (Transformations — Lazy)
+================================================================================
+
+  edges DataFrame
+       │
+       ├─────────────────────────────────────────────────────────────────────┐
+       │                                                                     │
+       ▼                                                                     ▼
+  groupBy("src").count()                                       groupBy("dst").count()
+  .rename("src" → "id")                                       .rename("dst" → "id")
+       │                                                                     │
+       ▼                                                                     ▼
+  out_degree [id, out_degree]                            in_degree [id, in_degree]
+    id=1 Alice   → 3                                       id=2 Bob     → 1
+    id=2 Bob     → 1                                       id=3 Charlie → 1
+    id=3 Charlie → 1                                       id=4 Diana   → 2
+    id=4 Diana   → 1                                       id=5 Eve     → 2
+    id=5 Eve     → 1                                       id=6 Frank   → 1
+       │                                                                     │
+       └─────────────────────────┐           ┌─────────────────────────────-┘
+                                 │           │
+                                 ▼           ▼
+                          vertices DataFrame
+                               │
+                               ▼
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │  LEFT JOIN vertices + out_degree ON id     [BroadcastHashJoin]          │
+  │  out_degree (5 rows) → broadcast to all partitions                      │
+  │  vertices  (6 rows) → probed against broadcast table                    │
+  │  fillna(0) → Alice gets in_degree=0, Frank gets out_degree=0            │
+  └──────────────────────────────┬──────────────────────────────────────────┘
+                                 │
+                                 ▼
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │  LEFT JOIN result + in_degree ON id        [BroadcastHashJoin]          │
+  │  in_degree (5 rows) → broadcast to all partitions                       │
+  │  No shuffle — purely local lookup per partition                         │
+  └──────────────────────────────┬──────────────────────────────────────────┘
+                                 │
+                                 ▼
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │  withColumn("total_degree", out_degree + in_degree)   [Narrow]         │
+  │  Per-row arithmetic — no shuffle                                        │
+  └──────────────────────────────┬──────────────────────────────────────────┘
+                                 │
+                                 ▼
+                        degree DataFrame
+                  [id, name, out_degree, in_degree, total_degree]
+
+================================================================================
+JOB 3 — degree.show()  (Degree Centrality output)
+================================================================================
+
+  edges ──────────────────────────────────────────────────────────────────────┐
+     │                                                                        │
+     ▼                                                                        ▼
+┌──────────────────────────────────┐    ┌───────────────────────────────────┐
+│  STAGE 0                         │    │  STAGE 2                          │
+│  Scan edges                      │    │  Scan edges                       │
+│  → partial count by "src"        │    │  → partial count by "dst"         │
+│    (map-side combine)            │    │    (map-side combine)             │
+│                                  │    │                                   │
+│  ════ SHUFFLE WRITE ════         │    │  ════ SHUFFLE WRITE ════          │
+│  (hash partition by "src")       │    │  (hash partition by "dst")        │
+└──────────────┬───────────────────┘    └─────────────────┬─────────────────┘
+               │  Wide (shuffle)                          │  Wide (shuffle)
+               ▼                                         ▼
+┌──────────────────────────────────┐    ┌───────────────────────────────────┐
+│  STAGE 1                         │    │  STAGE 3                          │
+│  Shuffle read                    │    │  Shuffle read                     │
+│  → final count per "src"         │    │  → final count per "dst"          │
+│  out_degree:                     │    │  in_degree:                       │
+│    Alice(1) → 3                  │    │    Bob(2)     → 1                 │
+│    Bob(2)   → 1                  │    │    Charlie(3) → 1                 │
+│    Charlie(3)→ 1                 │    │    Diana(4)   → 2                 │
+│    Diana(4) → 1                  │    │    Eve(5)     → 2                 │
+│    Eve(5)   → 1                  │    │    Frank(6)   → 1                 │
+└──────────────┬───────────────────┘    └─────────────────┬─────────────────┘
+               │                                          │
+               └──────────────────┬───────────────────────┘
+                                  │
+                                  ▼
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │  STAGE 4                                                                │
+  │  Scan vertices                                                          │
+  │  → BroadcastHashJoin(out_degree)     [no shuffle — 5 rows broadcast]   │
+  │  → BroadcastHashJoin(in_degree)      [no shuffle — 5 rows broadcast]   │
+  │  → fillna(0) → withColumn(total_degree)                                 │
+  │                                                                         │
+  │  ════ SHUFFLE WRITE ════                                                │
+  │  (range partition by total_degree for global sort)                      │
+  └──────────────────────────────┬──────────────────────────────────────────┘
+                                 │  Wide (shuffle)
+                                 ▼
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │  STAGE 5                                                                │
+  │  Shuffle read → Sort(total_degree DESC)                                 │
+  │  ┌──────────────────────────────────────────────────────────────────┐   │
+  │  │  Alice    out=3  in=0  total=3                                   │   │
+  │  │  Diana    out=1  in=2  total=3                                   │   │
+  │  │  Eve      out=1  in=2  total=3                                   │   │
+  │  │  Bob      out=1  in=1  total=2                                   │   │
+  │  │  Charlie  out=1  in=1  total=2                                   │   │
+  │  │  Frank    out=0  in=1  total=1                                   │   │
+  │  └──────────────────────────────────────────────────────────────────┘   │
+  └──────────────────────────────┬──────────────────────────────────────────┘
+                                 │
+                                 ▼
+                          ACTION: show()
+                     (collect to driver, print)
+
+================================================================================
+JOB 4 — degree.orderBy().first()  (Most influential node)
+================================================================================
+
+  ⚠  degree is NOT cached → full DAG recomputed (Stages 0–5 re-executed)
+
+  edges ──► STAGE 0 (count by src) ──► STAGE 1 (out_degree)  ┐
+  edges ──► STAGE 2 (count by dst) ──► STAGE 3 (in_degree)   ├──► STAGE 4
+                                                              │    (joins +
+  vertices ─────────────────────────────────────────────────-─┘     fillna +
+                                                                    total_degree)
+                                                                         │
+                                                                         ▼
+                                                                    STAGE 5
+                                                              Sort(total_degree DESC)
+                                                                         │
+                                                                         ▼
+                                                               ACTION: first()
+                                                          (take top 1 row to driver)
+
+  Result: {name: "Alice", total_degree: 3}
+
+  OPTIMIZATION: Add degree.cache() after line 61 to avoid this recomputation.
+
+================================================================================
+JOB 5 — Friend Connections show()
+================================================================================
+
+  edges DataFrame
+       │
+       ▼
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │  STAGE 0                                                                │
+  │                                                                         │
+  │  Step 1: Scan edges → filter(relationship == "friend")                  │
+  │          [Predicate Pushdown — applied before any join]                 │
+  │                                                                         │
+  │  All 7 edges:                     After filter (4 remain):              │
+  │  ┌──────────────────────────┐     ┌──────────────────────────┐          │
+  │  │ 1→2  friend       ✓      │     │ 1→2  friend              │          │
+  │  │ 1→3  colleague    ✗      │     │ 2→4  friend              │          │
+  │  │ 2→4  friend       ✓      │     │ 4→5  friend              │          │
+  │  │ 3→4  colleague    ✗      │     │ 1→5  friend              │          │
+  │  │ 4→5  friend       ✓      │     └──────────────────────────┘          │
+  │  │ 5→6  colleague    ✗      │                                           │
+  │  │ 1→5  friend       ✓      │                                           │
+  │  └──────────────────────────┘                                           │
+  │                                                                         │
+  │  Step 2: Scan vertices → rename "name" → "src_name"                    │
+  │          vertices (6 rows) → BROADCAST                                  │
+  │          BroadcastHashJoin ON (src == id)   [no shuffle]               │
+  │                                                                         │
+  │  Result after join 1:                                                   │
+  │  ┌──────────────────────────────────────┐                               │
+  │  │ src=1 dst=2 relationship=friend      │                               │
+  │  │ src_name=Alice                       │                               │
+  │  │ src=2 dst=4 relationship=friend      │                               │
+  │  │ src_name=Bob                         │                               │
+  │  │ src=4 dst=5 relationship=friend      │                               │
+  │  │ src_name=Diana                       │                               │
+  │  │ src=1 dst=5 relationship=friend      │                               │
+  │  │ src_name=Alice                       │                               │
+  │  └──────────────────────────────────────┘                               │
+  │                                                                         │
+  │  Step 3: Scan vertices → rename "name" → "dst_name"                    │
+  │          vertices (6 rows) → BROADCAST                                  │
+  │          BroadcastHashJoin ON (dst == id)   [no shuffle]               │
+  │                                                                         │
+  │  Result after join 2:                                                   │
+  │  ┌──────────────────────────────────────┐                               │
+  │  │ src_name=Alice   dst_name=Bob        │                               │
+  │  │ src_name=Bob     dst_name=Diana      │                               │
+  │  │ src_name=Diana   dst_name=Eve        │                               │
+  │  │ src_name=Alice   dst_name=Eve        │                               │
+  │  └──────────────────────────────────────┘                               │
+  │                                                                         │
+  │  Step 4: select(src_name, dst_name, relationship) → collect             │
+  │  No shuffle — all operations local per partition                        │
+  └──────────────────────────────┬──────────────────────────────────────────┘
+                                 │
+                                 ▼
+                          ACTION: show()
+              ┌────────────────────────────────────────┐
+              │ src_name │ dst_name │ relationship      │
+              │ Alice    │ Bob      │ friend            │
+              │ Bob      │ Diana    │ friend            │
+              │ Diana    │ Eve      │ friend            │
+              │ Alice    │ Eve      │ friend            │
+              └────────────────────────────────────────┘
+
+================================================================================
+COMPLETE DAG SUMMARY
+================================================================================
+
+  vertices ──────────────────────────────────────────────────────────────────┐
+  [6 rows]                                                                   │
+      │                                                                      │
+      ├── Job 1: Scan → show()                                               │
+      │                                                                      │
+      └──────────────────────────────────────────────────────────────┐       │
+                                                                     │       │
+  edges ─────────────────────────────────────────────────────────────│───────│──┐
+  [7 rows]                                                           │       │  │
+      │                                                              │       │  │
+      ├── Job 2: Scan → show()                                       │       │  │
+      │                                                              │       │  │
+      ├── groupBy("src").count()  [Shuffle]  → out_degree ──────────┤       │  │
+      │                                                             JOIN     │  │
+      ├── groupBy("dst").count()  [Shuffle]  → in_degree  ──────────┤  vertices│
+      │                                                              │       │  │
+      │                                               [BroadcastJoin x2]    │  │
+      │                                                              │       │  │
+      │                                               withColumn(total_degree)  │
+      │                                                              │       │  │
+      │                                                    degree DataFrame  │  │
+      │                                                         │    │       │  │
+      │                                             ┌───────────┘    │       │  │
+      │                                             │                │       │  │
+      │                                        Job 3: show()   Job 4: first()  │
+      │                                        [Sort shuffle]  [Recompute!]    │
+      │                                                                        │
+      └── filter(relationship=friend)  [Predicate pushdown]                   │
+             → BroadcastJoin(vertices src_name) ──────────────────────────────┘
+             → BroadcastJoin(vertices dst_name) ──────────────────────────────┘
+             → select → show()
+             Job 5: 0 shuffles
+
+================================================================================
+JOB SUMMARY
+================================================================================
+
+  Job | Action                      | Stages | Shuffles | Key Optimization
+  ----|-----------------------------|--------|----------|-------------------
+  1   | vertices.show()             | 1      | 0        | None
+  2   | edges.show()                | 1      | 0        | None
+  3   | degree centrality show()    | 6      | 3        | BroadcastJoin x2
+                                                          Partial agg x2
+                                                          Range sort
+  4   | degree.first()              | 6      | 3        | Full recompute
+                                                          (add .cache()!)
+  5   | friend connections show()   | 1      | 0        | Predicate pushdown
+                                                          BroadcastJoin x2
+
+  Total jobs    : 5
+  Total stages  : 15
+  Total shuffles: 6  (all in Jobs 3 and 4)
+
+================================================================================
