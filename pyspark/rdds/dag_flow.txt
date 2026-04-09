@@ -1,0 +1,135 @@
+==================================================
+DAG FLOW — rdds.py
+==================================================
+
+Spark builds a DAG (Directed Acyclic Graph) of transformations lazily.
+Each action triggers the execution of its upstream DAG lineage.
+
+──────────────────────────────────────────────────────────────────────
+DAG 1 — numbers.collect()   [Action: collect]
+──────────────────────────────────────────────────────────────────────
+
+  sc.parallelize([1..10])
+          │
+          ▼
+    [RDD: numbers]
+          │
+          ▼
+      collect()   ──► [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+
+──────────────────────────────────────────────────────────────────────
+DAG 2 — squared.collect()   [Action: collect]
+──────────────────────────────────────────────────────────────────────
+
+  sc.parallelize([1..10])
+          │
+          ▼
+    [RDD: numbers]
+          │
+          │  map(x → x²)
+          ▼
+    [RDD: squared]
+          │
+          ▼
+      collect()   ──► [1, 4, 9, 16, 25, 36, 49, 64, 81, 100]
+
+
+──────────────────────────────────────────────────────────────────────
+DAG 3 — evens.collect()   [Action: collect]
+──────────────────────────────────────────────────────────────────────
+
+  sc.parallelize([1..10])
+          │
+          ▼
+    [RDD: numbers]
+          │
+          │  filter(x → x % 2 == 0)
+          ▼
+    [RDD: evens]
+          │
+          ▼
+      collect()   ──► [2, 4, 6, 8, 10]
+
+
+──────────────────────────────────────────────────────────────────────
+DAG 4 — word_counts.sortBy().collect()   [Action: collect]
+──────────────────────────────────────────────────────────────────────
+
+  sc.parallelize(["spark","rdd","python","bigdata","spark","rdd"])
+          │
+          ▼
+    [RDD: words]
+          │
+          │  map(w → (w, 1))
+          ▼
+    [RDD: word_pairs]
+     ("spark",1), ("rdd",1), ("python",1),
+     ("bigdata",1), ("spark",1), ("rdd",1)
+          │
+          │  reduceByKey((a,b) → a+b)        ← shuffle boundary (Stage split)
+          ▼
+    [RDD: word_counts]
+     ("spark",2), ("rdd",2), ("python",1), ("bigdata",1)
+          │
+          │  sortBy(count, ascending=False)  ← shuffle boundary (Stage split)
+          ▼
+    [RDD: sorted_word_counts]
+          │
+          ▼
+      collect()   ──► spark:2, rdd:2, python:1, bigdata:1
+
+
+──────────────────────────────────────────────────────────────────────
+DAG 5 — numbers stats   [Actions: count, sum, mean, max, min]
+──────────────────────────────────────────────────────────────────────
+
+  sc.parallelize([1..10])
+          │
+          ▼
+    [RDD: numbers]
+          │
+          ├──── count()  ──► 10
+          ├──── sum()    ──► 55
+          ├──── mean()   ──► 5.5
+          ├──── max()    ──► 10
+          └──── min()    ──► 1
+
+
+──────────────────────────────────────────────────────────────────────
+STAGE BREAKDOWN SUMMARY
+──────────────────────────────────────────────────────────────────────
+
+  Stage 0 : parallelize numbers          (DAG 1, 2, 3, 5)
+  Stage 1 : collect numbers              (DAG 1)
+  Stage 2 : map + collect squared        (DAG 2)
+  Stage 3 : filter + collect evens       (DAG 3)
+  Stage 4 : parallelize words            (DAG 4)
+  Stage 5 : map → word_pairs             (DAG 4)
+  Stage 6 : reduceByKey → word_counts    (DAG 4)  ← shuffle
+  Stage 7 : sortBy → sorted counts       (DAG 4)  ← shuffle
+  Stage 8 : collect word_counts          (DAG 4)
+  Stage 9 : count / sum / mean / max / min on numbers (DAG 5)
+
+  Note: Shuffle boundaries occur at reduceByKey and sortBy,
+        causing Spark to split the DAG into separate stages.
+
+──────────────────────────────────────────────────────────────────────
+RDD LINEAGE (Full DAG)
+──────────────────────────────────────────────────────────────────────
+
+  parallelize([1..10])
+      └──► numbers
+              ├──► map(x²)        ──► squared       ──► collect()
+              ├──► filter(even)   ──► evens          ──► collect()
+              └──► count / sum / mean / max / min
+
+  parallelize([words])
+      └──► words
+              └──► map(w→(w,1))   ──► word_pairs
+                      └──► reduceByKey  ──► word_counts
+                                  └──► sortBy  ──► sorted_word_counts  ──► collect()
+
+==================================================
+END OF DAG FLOW
+==================================================

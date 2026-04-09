@@ -1,0 +1,108 @@
+==================================================
+MAIN PROPERTIES OF RDDs
+==================================================
+
+RDD (Resilient Distributed Dataset) is the core data structure of Apache Spark.
+It is a fault-tolerant, immutable, distributed collection of objects processed in parallel.
+
+──────────────────────────────────────────────────────────────────────
+1. RESILIENCE (Fault Tolerance)
+──────────────────────────────────────────────────────────────────────
+RDDs recover from failures automatically using DAG lineage.
+No data replication needed — lost partitions are re-computed from source.
+
+  parallelize([1..10]) → map(x²) → [partition lost]
+                                          ↑
+                            Spark re-computes from lineage
+
+──────────────────────────────────────────────────────────────────────
+2. DISTRIBUTED
+──────────────────────────────────────────────────────────────────────
+Data is split into partitions and distributed across nodes in the cluster.
+Each partition is processed independently and in parallel.
+
+  numbers = sc.parallelize([1..10])
+  # Spark splits into 8 partitions (local[*] with 8 cores)
+  # Each partition processed by a separate task/core
+
+──────────────────────────────────────────────────────────────────────
+3. IMMUTABILITY
+──────────────────────────────────────────────────────────────────────
+RDDs cannot be modified once created.
+Every transformation produces a new RDD — the original stays unchanged.
+
+  numbers = sc.parallelize([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])  # original RDD
+  squared = numbers.map(lambda x: x ** 2)    # new RDD — numbers unchanged
+  evens   = numbers.filter(lambda x: x % 2 == 0)  # another new RDD
+
+──────────────────────────────────────────────────────────────────────
+4. LAZY EVALUATION
+──────────────────────────────────────────────────────────────────────
+Transformations are not executed immediately — they only build the DAG.
+Execution happens only when an action is called.
+
+  # These 3 lines build the DAG — no computation happens
+  word_pairs  = words.map(lambda w: (w, 1))
+  word_counts = word_pairs.reduceByKey(lambda a, b: a + b)
+  sorted_wc   = word_counts.sortBy(lambda x: x[1], ascending=False)
+
+  # THIS triggers actual execution
+  sorted_wc.collect()
+
+──────────────────────────────────────────────────────────────────────
+5. PARTITIONING
+──────────────────────────────────────────────────────────────────────
+RDDs are divided into logical partitions — the unit of parallelism.
+More partitions = more parallelism.
+
+  numbers = sc.parallelize([1..10])
+  print(numbers.getNumPartitions())  # 8 on local[*] with 8 cores
+
+──────────────────────────────────────────────────────────────────────
+6. IN-MEMORY PROCESSING
+──────────────────────────────────────────────────────────────────────
+RDDs are processed in memory (RAM) by default, making them significantly
+faster than disk-based systems like Hadoop MapReduce.
+Can be persisted/cached for reuse across multiple actions.
+
+  numbers.persist()  # keeps RDD in memory across multiple actions
+  numbers.cache()    # shortcut for persist with default storage level (MEMORY_ONLY)
+
+──────────────────────────────────────────────────────────────────────
+7. TYPE SAFETY
+──────────────────────────────────────────────────────────────────────
+RDDs are strongly typed — the type of elements is known at compile time.
+
+  numbers : RDD[int]   = sc.parallelize([1, 2, 3])
+  words   : RDD[str]   = sc.parallelize(["spark", "rdd"])
+  pairs   : RDD[tuple] = words.map(lambda w: (w, 1))
+
+──────────────────────────────────────────────────────────────────────
+8. LINEAGE GRAPH (DAG)
+──────────────────────────────────────────────────────────────────────
+Every RDD tracks its lineage — the sequence of transformations that produced it.
+This enables fault tolerance and lazy evaluation.
+
+  parallelize → map(w→(w,1)) → reduceByKey → sortBy → collect
+       ↑              ↑              ↑           ↑
+    Stage 0        Stage 1       Stage 2      Stage 3
+                                   ↑ shuffle   ↑ shuffle
+
+──────────────────────────────────────────────────────────────────────
+QUICK REFERENCE SUMMARY
+──────────────────────────────────────────────────────────────────────
+
+  Property        Description
+  ──────────────────────────────────────────────────────────────
+  Resilient       Auto-recovers via lineage DAG
+  Distributed     Partitioned across cluster nodes
+  Immutable       Transformations produce new RDDs
+  Lazy            Executes only when action is triggered
+  Partitioned     Unit of parallelism
+  In-Memory       RAM-based, fast processing
+  Type-Safe       Strongly typed elements
+  Lineage         Full transformation history tracked
+
+==================================================
+END OF RDD PROPERTIES
+==================================================

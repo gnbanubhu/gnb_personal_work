@@ -1,0 +1,83 @@
+==================================================
+EXECUTION PLAN — rdds.py
+==================================================
+
+1. SPARK SESSION INITIALIZATION
+   - Create SparkSession with app name "RDDSample"
+   - Master: local[*]  (uses all available CPU cores)
+   - Log level set to ERROR to suppress verbose output
+   - SparkContext (sc) extracted from the session
+
+2. RDD CREATION
+   - numbers : sc.parallelize([1..10])  → 10 integer elements
+   - words   : sc.parallelize(["spark","rdd","python","bigdata","spark","rdd"])  → 6 string elements
+
+3. TRANSFORMATIONS  (lazy — not executed until an action triggers them)
+   ┌─────────────────────────────────────────────────────────────┐
+   │ squared     = numbers.map(x → x²)                          │
+   │               [1,4,9,16,25,36,49,64,81,100]                │
+   │                                                             │
+   │ evens       = numbers.filter(x → x % 2 == 0)               │
+   │               [2,4,6,8,10]                                  │
+   │                                                             │
+   │ word_pairs  = words.map(w → (w, 1))                         │
+   │               [("spark",1),("rdd",1),("python",1),...]      │
+   │                                                             │
+   │ word_counts = word_pairs.reduceByKey((a,b) → a+b)           │
+   │               {"spark":2, "rdd":2, "python":1,"bigdata":1} │
+   └─────────────────────────────────────────────────────────────┘
+
+4. ACTIONS  (trigger DAG execution)
+   ┌──────────────────────────────────────────────────────────────┐
+   │ Stage 1 : numbers.collect()     → prints original list       │
+   │ Stage 2 : squared.collect()     → prints squared list        │
+   │ Stage 3 : evens.collect()       → prints even numbers        │
+   │ Stage 4 : word_counts                                        │
+   │             .sortBy(count, asc=False)                        │
+   │             .collect()          → prints word frequency      │
+   │ Stage 5 : numbers.count()       → 10                         │
+   │ Stage 6 : numbers.sum()         → 55                         │
+   │ Stage 7 : numbers.mean()        → 5.5                        │
+   │ Stage 8 : numbers.max()         → 10                         │
+   │ Stage 9 : numbers.min()         → 1                          │
+   └──────────────────────────────────────────────────────────────┘
+
+5. EXECUTION OUTPUT
+   ==================================================
+   ORIGINAL NUMBERS
+   ==================================================
+   [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+   ==================================================
+   SQUARED NUMBERS
+   ==================================================
+   [1, 4, 9, 16, 25, 36, 49, 64, 81, 100]
+
+   ==================================================
+   EVEN NUMBERS
+   ==================================================
+   [2, 4, 6, 8, 10]
+
+   ==================================================
+   WORD COUNTS
+   ==================================================
+     spark      : 2
+     rdd        : 2
+     python     : 1
+     bigdata    : 1
+
+   ==================================================
+   RDD STATS
+   ==================================================
+     Count  : 10
+     Sum    : 55
+     Mean   : 5.5
+     Max    : 10
+     Min    : 1
+
+6. SHUTDOWN
+   - spark.stop() called to release all Spark resources
+
+==================================================
+END OF EXECUTION PLAN
+==================================================
