@@ -1,0 +1,282 @@
+==================================================
+TYPES OF RDDs IN APACHE SPARK
+==================================================
+
+RDDs come in several types based on how they are created,
+what kind of data they hold, and what operations produce them.
+
+──────────────────────────────────────────────────────────────────────
+CATEGORY 1 — BASED ON CREATION
+──────────────────────────────────────────────────────────────────────
+
+1. PARALLELIZED RDD
+   ─────────────────
+   Created from an existing in-memory Python/Scala/Java collection
+   using sc.parallelize(). Most common way to create RDDs in local mode.
+
+   Example:
+     numbers = sc.parallelize([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+     words   = sc.parallelize(["spark", "rdd", "python", "bigdata"])
+
+   Use case  : Testing, prototyping, small datasets
+   Partitions : Default = number of CPU cores
+
+
+2. HADOOP RDD (File-based RDD)
+   ────────────────────────────
+   Created by reading data from external storage systems like HDFS,
+   local filesystem, S3, etc. using sc.textFile() or sc.wholeTextFiles().
+
+   Example:
+     lines     = sc.textFile("hdfs://path/to/file.txt")
+     all_files = sc.wholeTextFiles("hdfs://path/to/directory/")
+
+   Use case  : Reading large files from distributed storage
+   Partitions : One partition per HDFS block (default 128 MB)
+
+
+3. SEQUENCE FILE RDD
+   ──────────────────
+   Created from Hadoop SequenceFiles — binary key-value file format
+   used in Hadoop ecosystem.
+
+   Example:
+     rdd = sc.sequenceFile("hdfs://path/to/seqfile",
+                           keyClass="org.apache.hadoop.io.Text",
+                           valueClass="org.apache.hadoop.io.IntWritable")
+
+   Use case  : Interoperability with Hadoop MapReduce pipelines
+
+
+4. EMPTY RDD
+   ──────────
+   An RDD with no elements. Useful as a placeholder or default value.
+
+   Example:
+     empty_rdd = sc.emptyRDD()
+
+   Use case  : Default/placeholder RDDs, testing edge cases
+
+
+──────────────────────────────────────────────────────────────────────
+CATEGORY 2 — BASED ON DATA TYPE
+──────────────────────────────────────────────────────────────────────
+
+5. PAIR RDD (Key-Value RDD)
+   ──────────────────────────
+   An RDD of (key, value) tuples. Enables key-based operations like
+   groupByKey, reduceByKey, join, sortByKey, etc.
+
+   Example:
+     word_pairs  = words.map(lambda w: (w, 1))
+     # [("spark",1), ("rdd",1), ("python",1), ("bigdata",1), ("spark",1)]
+
+     word_counts = word_pairs.reduceByKey(lambda a, b: a + b)
+     # [("spark",2), ("rdd",2), ("python",1), ("bigdata",1)]
+
+   Operations exclusive to Pair RDDs:
+     - reduceByKey()    : aggregate values by key
+     - groupByKey()     : group all values for each key
+     - sortByKey()      : sort by key
+     - join()           : inner join two Pair RDDs
+     - leftOuterJoin()  : left outer join
+     - rightOuterJoin() : right outer join
+     - fullOuterJoin()  : full outer join
+     - cogroup()        : group data from multiple RDDs by key
+     - keys()           : return only keys
+     - values()         : return only values
+     - mapValues()      : apply function to values only
+     - countByKey()     : count occurrences of each key
+
+   Use case  : Word count, aggregation, joins, grouping
+
+
+6. DOUBLE RDD (Numeric RDD)
+   ──────────────────────────
+   An RDD of numeric (float/double) values. Supports statistical
+   aggregate operations not available on generic RDDs.
+
+   Example:
+     nums = sc.parallelize([1.0, 2.5, 3.7, 4.2, 5.8])
+
+   Operations exclusive to Double RDDs:
+     - sum()     : total sum
+     - mean()    : average
+     - variance(): variance
+     - stdev()   : standard deviation
+     - max()     : maximum value
+     - min()     : minimum value
+     - stats()   : summary statistics object
+
+   From rdds.py:
+     print(f"  Sum    : {numbers.sum()}")    # 55
+     print(f"  Mean   : {numbers.mean()}")   # 5.5
+     print(f"  Max    : {numbers.max()}")    # 10
+     print(f"  Min    : {numbers.min()}")    # 1
+
+   Use case  : Statistical analysis, ML feature processing
+
+
+──────────────────────────────────────────────────────────────────────
+CATEGORY 3 — BASED ON TRANSFORMATION
+──────────────────────────────────────────────────────────────────────
+
+7. MAPPED RDD (MapPartitionsRDD)
+   ───────────────────────────────
+   Produced by map(), flatMap(), mapPartitions() transformations.
+   Applies a function to each element or partition.
+
+   Example:
+     squared    = numbers.map(lambda x: x ** 2)
+     # map()         : one-to-one transformation
+     # flatMap()     : one-to-many transformation (flattens result)
+     # mapPartitions : applies function to entire partition at once
+
+     sentences  = sc.parallelize(["hello world", "spark rdd"])
+     flat_words = sentences.flatMap(lambda s: s.split(" "))
+     # ["hello", "world", "spark", "rdd"]
+
+   Use case  : Element-level transformations, parsing, feature extraction
+
+
+8. FILTERED RDD
+   ─────────────
+   Produced by filter() transformation.
+   Retains only elements matching a condition.
+
+   Example:
+     evens = numbers.filter(lambda x: x % 2 == 0)
+     # [2, 4, 6, 8, 10]
+
+   Use case  : Data cleaning, conditional selection
+
+
+9. SHUFFLED RDD
+   ─────────────
+   Produced by operations that require redistributing data across
+   partitions — reduceByKey, groupByKey, sortBy, repartition.
+   These create a stage boundary (shuffle) in the DAG.
+
+   Example:
+     word_counts  = word_pairs.reduceByKey(lambda a, b: a + b)  # shuffle
+     sorted_words = word_counts.sortBy(lambda x: x[1], ascending=False)  # shuffle
+
+   Note: Shuffles are the most expensive operations — data moves
+         across the network between executors.
+
+   Use case  : Aggregation, sorting, grouping by key
+
+
+10. UNION RDD
+    ──────────
+    Produced by union() — combines two RDDs of the same type
+    without removing duplicates.
+
+    Example:
+      rdd1      = sc.parallelize([1, 2, 3])
+      rdd2      = sc.parallelize([3, 4, 5])
+      union_rdd = rdd1.union(rdd2)
+      # [1, 2, 3, 3, 4, 5]
+
+    Use case  : Merging datasets from multiple sources
+
+
+11. COGROUPED RDD
+    ──────────────
+    Produced by cogroup() — groups values from multiple Pair RDDs
+    sharing the same key into a single RDD.
+
+    Example:
+      rdd1 = sc.parallelize([("a", 1), ("b", 2)])
+      rdd2 = sc.parallelize([("a", 3), ("b", 4), ("c", 5)])
+      cogrouped = rdd1.cogroup(rdd2)
+      # ("a", ([1], [3])), ("b", ([2], [4])), ("c", ([], [5]))
+
+    Use case  : Multi-source key-based joins and lookups
+
+
+12. CARTESIAN RDD
+    ──────────────
+    Produced by cartesian() — returns every combination of elements
+    from two RDDs (cross product).
+
+    Example:
+      rdd1      = sc.parallelize([1, 2])
+      rdd2      = sc.parallelize(["a", "b"])
+      cartesian = rdd1.cartesian(rdd2)
+      # [(1,"a"), (1,"b"), (2,"a"), (2,"b")]
+
+    Note: Very expensive — avoid on large datasets.
+
+    Use case  : Feature combinations, graph algorithms
+
+
+13. ZIPPED RDD
+    ───────────
+    Produced by zip() — combines two RDDs element-by-element
+    into Pair RDDs. Both RDDs must have the same number of partitions
+    and elements.
+
+    Example:
+      keys   = sc.parallelize(["a", "b", "c"])
+      values = sc.parallelize([1, 2, 3])
+      zipped = keys.zip(values)
+      # [("a",1), ("b",2), ("c",3)]
+
+    Use case  : Combining parallel arrays into key-value pairs
+
+
+14. COALESCED RDD
+    ──────────────
+    Produced by coalesce() or repartition() — changes the number
+    of partitions in an RDD.
+
+    Example:
+      rdd         = sc.parallelize([1..100], 10)  # 10 partitions
+      reduced_rdd = rdd.coalesce(4)               # reduce to 4 (no shuffle)
+      repart_rdd  = rdd.repartition(8)            # resize to 8 (with shuffle)
+
+    coalesce()    : reduce partitions — no shuffle (efficient)
+    repartition() : increase or reduce partitions — with shuffle
+
+    Use case  : Optimizing parallelism before writing output
+
+
+15. PIPED RDD
+    ─────────
+    Produced by pipe() — passes each partition through an external
+    shell command (e.g., Python script, awk, sed).
+
+    Example:
+      rdd        = sc.parallelize(["hello", "world"])
+      piped_rdd  = rdd.pipe("tr '[:lower:]' '[:upper:]'")
+      # ["HELLO", "WORLD"]
+
+    Use case  : Integrating legacy scripts, shell-based processing
+
+
+──────────────────────────────────────────────────────────────────────
+QUICK REFERENCE SUMMARY
+──────────────────────────────────────────────────────────────────────
+
+  #   Type              Created By                    Key Feature
+  ──────────────────────────────────────────────────────────────────────
+  1   Parallelized      sc.parallelize()              In-memory collection → RDD
+  2   Hadoop/File       sc.textFile()                 External storage → RDD
+  3   Sequence File     sc.sequenceFile()             Hadoop binary format → RDD
+  4   Empty             sc.emptyRDD()                 No elements
+  5   Pair RDD          map(→ (k,v))                  Key-value operations
+  6   Double RDD        parallelize([floats])         Statistical operations
+  7   Mapped            map / flatMap / mapPartitions Element-level transform
+  8   Filtered          filter()                      Conditional selection
+  9   Shuffled          reduceByKey / sortBy          Data redistribution
+  10  Union             union()                       Merge two RDDs
+  11  CoGrouped         cogroup()                     Multi-source key grouping
+  12  Cartesian         cartesian()                   Cross product
+  13  Zipped            zip()                         Element-wise pairing
+  14  Coalesced         coalesce / repartition        Partition resizing
+  15  Piped             pipe()                        Shell command integration
+
+==================================================
+END OF RDD TYPES
+==================================================
