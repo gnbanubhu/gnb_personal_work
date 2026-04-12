@@ -1,0 +1,55 @@
+WHY DO WE NEED LLMs?
+=====================
+
+1. UNDERSTANDING HUMAN LANGUAGE
+---------------------------------
+Computers traditionally understand only structured data (numbers, tables, code).
+LLMs bridge the gap — they understand natural language the way humans write and
+speak it, making software accessible to everyone without needing to learn special syntax.
+
+
+2. PROBLEMS LLMs SOLVE
+------------------------
+Problem               Before LLMs                    With LLMs
+──────────────────────────────────────────────────────────────────────────────
+Search                Keyword matching               Understand intent and meaning
+Code writing          Manual, time-consuming         Generate, explain, debug code
+Document analysis     Read manually                  Summarize, extract, answer questions
+Customer support      Rule-based chatbots            Natural, context-aware conversations
+Data exploration      SQL expertise required         Ask questions in plain English
+Content creation      Manual writing                 Draft, edit, translate at scale
+
+
+3. CORE CAPABILITIES
+---------------------
+  • Reasoning       — solve multi-step problems, analyze trade-offs
+  • Summarization   — condense 100-page documents into key points
+  • Generation      — write code, emails, reports, SQL queries
+  • Classification  — label sentiment, categorize tickets, detect intent
+  • Extraction      — pull structured data from unstructured text
+  • Translation     — across languages and domains (text <-> code <-> SQL)
+
+
+4. WHY NOW?
+------------
+  • Scale           — trained on trillions of tokens covering almost all human knowledge
+  • Few-shot learn  — solve new tasks with just 2-3 examples (no retraining)
+  • General purpose — one model handles hundreds of different tasks
+  • API access      — integrate intelligence into any application in minutes
+
+
+5. REAL-WORLD DATA ENGINEERING USE CASES
+------------------------------------------
+  • Generate PySpark / SQL code from plain English descriptions
+  • Summarize pipeline failure logs and suggest root causes
+  • Answer questions over internal documentation (RAG)
+  • Classify and tag incoming data records automatically
+  • Auto-generate data quality rules from schema definitions
+  • Explain complex query execution plans in plain English
+
+
+SUMMARY
+--------
+LLMs make it possible to build software that understands context, reasons about
+problems, and communicates naturally — tasks that previously required a human expert.
+They are the interface layer between human intent and machine execution.

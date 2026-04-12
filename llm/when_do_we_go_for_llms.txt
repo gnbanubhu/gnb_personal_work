@@ -1,0 +1,197 @@
+WHEN DO WE GO FOR LLMs?
+========================
+
+OVERVIEW
+---------
+LLMs are powerful but not always the right tool. Choosing when to use an LLM
+depends on the nature of the problem, the type of input/output, and the trade-offs
+around cost, latency, accuracy, and explainability.
+
+
+WHEN TO USE LLMs
+-----------------
+
+1. UNSTRUCTURED TEXT INPUT
+   Use LLMs when your input is free-form natural language and traditional
+   rule-based or ML approaches are too brittle or expensive to maintain.
+
+   Examples:
+     • Customer support messages that need classification and response
+     • Parsing unstructured log files or error messages
+     • Extracting information from contracts, emails, or reports
+     • Understanding intent behind user queries
+
+
+2. TASKS REQUIRING LANGUAGE UNDERSTANDING
+   When the task requires understanding meaning, context, or nuance in text —
+   not just pattern matching or keyword search.
+
+   Examples:
+     • Semantic search — find documents by meaning, not exact words
+     • Sentiment analysis with context ("not bad" = positive)
+     • Detecting sarcasm, irony, or ambiguity in text
+     • Answering questions over a knowledge base (RAG)
+
+
+3. GENERATIVE TASKS
+   When the output needs to be human-quality text, code, or structured content
+   that would be expensive or impossible to template manually.
+
+   Examples:
+     • Code generation (SQL, PySpark, Python, shell scripts)
+     • Writing data pipeline documentation automatically
+     • Generating test cases from function signatures
+     • Drafting incident post-mortems from metrics and logs
+
+
+4. MULTI-TASK PROBLEMS
+   When you need one system to handle many different tasks without building
+   and maintaining a separate model for each.
+
+   Examples:
+     • A data assistant that can write SQL, explain errors, and summarize reports
+     • A chatbot that handles billing, technical, and general queries
+     • A coding assistant that writes, reviews, and refactors code
+
+
+5. FEW-SHOT OR ZERO-SHOT SCENARIOS
+   When you have little or no labeled training data, but you can describe
+   the task in natural language or provide a few examples.
+
+   Examples:
+     • New classification labels that weren't in training data
+     • Domain-specific extraction with only 2-3 annotated examples
+     • Prototyping a new NLP feature without a labeled dataset
+
+
+6. REASONING AND MULTI-STEP PROBLEMS
+   When the task requires chaining multiple logical steps, planning,
+   or synthesizing information from different sources.
+
+   Examples:
+     • Root cause analysis from a sequence of pipeline events
+     • Evaluating trade-offs between architectural options
+     • Breaking down a complex user query into sub-tasks (agents)
+     • Summarizing findings across multiple documents
+
+
+7. CONVERSATIONAL INTERFACES
+   When you need a system that can maintain context across multiple turns
+   and respond naturally to follow-up questions.
+
+   Examples:
+     • Data exploration chatbots ("show me sales for last month" → "now filter by region")
+     • Internal knowledge base assistants
+     • Interactive debugging assistants for engineers
+
+
+8. DYNAMIC KNOWLEDGE RETRIEVAL (RAG)
+   When the knowledge changes frequently and you cannot retrain a model
+   each time — inject fresh documents at query time instead.
+
+   Examples:
+     • Q&A over internal wikis, runbooks, and documentation
+     • Querying company policies, product specs, or legal documents
+     • Support agents grounded in up-to-date knowledge bases
+
+
+WHEN NOT TO USE LLMs
+---------------------
+
+  Situation                          Better Alternative
+  ──────────────────────────────────────────────────────────────────────────
+  Simple rule-based classification   Regex, decision tree, keyword rules
+  Structured tabular data prediction Traditional ML (XGBoost, sklearn)
+  Real-time, sub-10ms latency        Lightweight model or lookup table
+  100% deterministic output required Hard-coded logic or templating
+  Highly regulated / auditable tasks Explainable ML models
+  Tiny dataset with clear labels     Fine-tuned small BERT / classifier
+  Pure numerical forecasting         Time-series models (Prophet, ARIMA)
+  High-volume, low-cost inference    Small fine-tuned model or rules
+
+
+LLM vs TRADITIONAL ML — DECISION GUIDE
+----------------------------------------
+
+  Ask these questions:
+
+  1. Is the input unstructured text?
+       YES → LLM is a good candidate
+       NO  → Consider traditional ML or rules
+
+  2. Does the task require language understanding or generation?
+       YES → LLM
+       NO  → Traditional model or lookup
+
+  3. Do you have labeled training data?
+       YES (large) → Fine-tune a smaller model
+       NO / few    → LLM with few-shot or zero-shot prompting
+
+  4. Does the knowledge change frequently?
+       YES → RAG + LLM
+       NO  → Fine-tuned model or static rules
+
+  5. Is cost or latency critical?
+       YES → Use smallest capable model (Haiku) or traditional approach
+       NO  → Use best-fit LLM
+
+  6. Do you need explainability?
+       YES → Traditional ML with feature importance
+       NO  → LLM is acceptable
+
+
+LLM DECISION MATRIX
+--------------------
+
+  Use Case                         Use LLM?   Reason
+  ──────────────────────────────────────────────────────────────────────────
+  Text classification (few labels) YES        Zero/few-shot, no training data needed
+  Text classification (many labels)MAYBE      Fine-tune smaller BERT if data available
+  SQL generation from English      YES        Complex generation task
+  Fraud detection (tabular data)   NO         XGBoost / neural net is faster, cheaper
+  Document Q&A over internal wiki  YES        RAG + LLM is the right pattern
+  Log anomaly detection            MAYBE      Rule-based or ML may be sufficient
+  Customer support chatbot         YES        Multi-turn, language understanding needed
+  Real-time price prediction       NO         Regression model, latency too high for LLM
+  Code review automation           YES        Reasoning + language understanding needed
+  ETL pipeline scheduling          NO         Airflow / rule-based orchestration
+  Sentiment analysis at scale      MAYBE      Fine-tuned model cheaper for high volume
+  Data catalog auto-documentation  YES        LLM generates descriptions from schema
+
+
+COST vs CAPABILITY TRADE-OFF
+------------------------------
+
+  High Cost / High Capability
+    → Claude Opus, GPT-4o
+    → Use for: complex reasoning, multi-step agents, deep analysis
+
+  Medium Cost / Medium Capability
+    → Claude Sonnet, GPT-4o-mini
+    → Use for: code generation, summarization, RAG, data analysis
+
+  Low Cost / Fast
+    → Claude Haiku, GPT-3.5
+    → Use for: classification, simple Q&A, high-volume extraction
+
+  Free / On-Premise
+    → LLaMA 3, Mistral, Gemma
+    → Use for: privacy-sensitive data, offline environments, cost elimination
+
+
+SUMMARY
+--------
+Go for LLMs when:
+  ✔  Input is unstructured text requiring understanding or generation
+  ✔  The task involves reasoning, summarization, or multi-step logic
+  ✔  You lack labeled data and need zero/few-shot generalization
+  ✔  Knowledge changes frequently (RAG is better than retraining)
+  ✔  You need one system to handle many diverse language tasks
+  ✔  Building a conversational or interactive AI interface
+
+Do NOT go for LLMs when:
+  ✘  The problem is well-defined with structured input/output
+  ✘  Latency requirements are sub-10ms
+  ✘  Cost per inference is a hard constraint at high volume
+  ✘  The task requires 100% deterministic or auditable outputs
+  ✘  A simpler rule-based or classical ML solution already works well

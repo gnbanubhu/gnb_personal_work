@@ -1,0 +1,178 @@
+WHAT ARE LLMs (Large Language Models)?
+========================================
+
+DEFINITION
+-----------
+A Large Language Model (LLM) is a type of artificial intelligence model trained
+on massive amounts of text data to understand, generate, and reason about human
+language. It is built on a deep learning architecture called the Transformer and
+learns statistical patterns across billions of words to predict and produce
+coherent, contextually relevant text.
+
+
+HOW LLMs ARE BUILT
+-------------------
+  Step 1 — Pre-training
+    The model is trained on a huge corpus of text (books, web pages, code,
+    articles) — often trillions of tokens. It learns to predict the next word
+    given all previous words. This is called self-supervised learning.
+
+  Step 2 — Fine-tuning (Supervised)
+    The pre-trained model is further trained on high-quality, task-specific
+    examples to improve performance on targeted use cases (e.g., Q&A, coding).
+
+  Step 3 — RLHF (Reinforcement Learning from Human Feedback)
+    Human raters rank model responses. The model is then optimized to produce
+    outputs that humans prefer — making it more helpful, harmless, and honest.
+
+
+ARCHITECTURE — THE TRANSFORMER
+--------------------------------
+  LLMs are based on the Transformer architecture (introduced by Google in 2017).
+
+  Key components:
+    • Tokenizer         — splits text into tokens (words or sub-words)
+    • Embeddings        — converts tokens into dense numerical vectors
+    • Attention         — allows the model to focus on relevant parts of input
+    • Self-Attention    — each token attends to every other token in context
+    • Feed-Forward      — processes attended representations layer by layer
+    • Decoder / Output  — generates the next token at each step
+
+  The "large" in LLM refers to:
+    • Number of parameters (weights): 7B, 70B, 175B, 1T+
+    • Training data size: hundreds of billions to trillions of tokens
+    • Compute used: thousands of GPUs over weeks or months
+
+
+KEY CONCEPTS
+-------------
+  Token
+    The basic unit of text. One token ≈ 0.75 words in English.
+    "Hello world" = 2 tokens. LLMs think in tokens, not characters or words.
+
+  Context Window
+    The maximum number of tokens the model can process at once.
+    Examples: GPT-4 = 128K tokens, Claude Opus = 200K tokens.
+
+  Temperature
+    Controls randomness of output.
+    Low (0.0) = deterministic / factual. High (1.0+) = creative / varied.
+
+  Parameters
+    The learned numerical weights inside the model.
+    More parameters = more capacity to store knowledge and handle complexity.
+
+  Prompt
+    The input text you send to the model. Quality of prompt directly
+    impacts quality of output — hence Prompt Engineering.
+
+  Inference
+    Running the trained model to generate a response. No learning happens
+    during inference — only during training.
+
+
+TYPES OF LLMs
+--------------
+  Base / Foundation Model
+    Trained only on raw text (next-token prediction). Not instruction-tuned.
+    Example: GPT-3 base, LLaMA base.
+
+  Instruction-Tuned Model
+    Fine-tuned to follow user instructions.
+    Example: ChatGPT, Claude, Gemini, Mistral-Instruct.
+
+  Code LLMs
+    Specialized on programming languages.
+    Example: GitHub Copilot, CodeLlama, Codestral.
+
+  Multimodal LLMs
+    Handle text + images (and sometimes audio/video).
+    Example: GPT-4o, Claude 3, Gemini Ultra.
+
+  Open-Source LLMs
+    Weights publicly available — can be run locally.
+    Example: LLaMA 3, Mistral, Falcon, Gemma.
+
+  Closed / Proprietary LLMs
+    Accessed only via API. Weights not public.
+    Example: GPT-4, Claude, Gemini.
+
+
+POPULAR LLMs (2024–2026)
+--------------------------
+  Model               Provider        Parameters    Context Window
+  ──────────────────────────────────────────────────────────────────
+  GPT-4o              OpenAI          ~1.8T (est.)  128K tokens
+  Claude Opus 4.6     Anthropic       Undisclosed   200K tokens
+  Claude Sonnet 4.6   Anthropic       Undisclosed   200K tokens
+  Gemini Ultra        Google          Undisclosed   1M tokens
+  LLaMA 3.1 405B      Meta            405B          128K tokens
+  Mistral Large       Mistral AI      Undisclosed   128K tokens
+  Grok 2              xAI             Undisclosed   128K tokens
+
+
+CAPABILITIES OF LLMs
+----------------------
+  Language Tasks
+    • Text generation, summarization, translation
+    • Question answering, dialogue, creative writing
+
+  Reasoning Tasks
+    • Math problem solving (with chain-of-thought)
+    • Logical reasoning, multi-step planning
+    • Code debugging and explanation
+
+  Knowledge Tasks
+    • Factual Q&A from training data
+    • Document understanding and extraction
+    • Named entity recognition, classification
+
+  Code Tasks
+    • Write, explain, refactor, debug code
+    • Generate SQL, PySpark, shell scripts
+    • Convert between programming languages
+
+
+LIMITATIONS OF LLMs
+---------------------
+  • Hallucination     — can generate confident but incorrect information
+  • Knowledge cutoff  — training data has a fixed end date
+  • Context limit     — cannot process documents larger than context window
+  • No real-time data — no live internet access (unless tool-augmented)
+  • Bias              — reflects biases present in training data
+  • Cost              — large models are expensive to run at scale
+  • Explainability    — hard to know exactly why a model gave an answer
+
+
+LLMs vs TRADITIONAL ML
+------------------------
+  Dimension         Traditional ML            LLM
+  ──────────────────────────────────────────────────────────────────
+  Task scope        One model per task        One model, many tasks
+  Training data     Labeled examples          Raw text (self-supervised)
+  Input type        Structured features       Natural language / text
+  Output            Class label / number      Free-form text
+  Adaptability      Retrain for new task      Prompt engineering
+  Size              MB to GB                  GB to TB
+  Expertise needed  Feature engineering       Prompt engineering
+
+
+LLMs IN DATA ENGINEERING
+--------------------------
+  • Natural language to SQL (Text2SQL)
+  • Auto-generate PySpark / dbt transformation code
+  • Summarize and explain pipeline logs and errors
+  • Power RAG systems for internal documentation search
+  • Classify and tag incoming records in data pipelines
+  • Generate data quality rules from schema definitions
+  • Assist with data catalog descriptions and lineage notes
+
+
+SUMMARY
+--------
+LLMs are foundation AI models trained on vast text corpora that can understand
+and generate human language across virtually any domain. Built on the Transformer
+architecture, they power modern AI assistants, coding tools, and intelligent
+data applications. Their ability to generalize across tasks from a single model —
+with no task-specific retraining — makes them one of the most transformative
+technologies in software engineering today.
