@@ -1,0 +1,367 @@
+WHAT IS NATURAL LANGUAGE PROCESSING (NLP)?
+===========================================
+
+OVERVIEW
+---------
+Natural Language Processing (NLP) is a branch of Artificial Intelligence (AI)
+that enables computers to understand, interpret, manipulate, and generate
+human language — both text and speech.
+
+NLP bridges the gap between human communication and machine understanding
+by combining linguistics, computer science, and machine learning.
+
+  Human Language (unstructured text/speech)
+       ↓
+  NLP Pipeline (processing + modeling)
+       ↓
+  Machine Understanding + Actionable Output
+
+
+WHY IS NLP HARD?
+-----------------
+Human language is inherently ambiguous and complex:
+
+  Ambiguity       "I saw the man with the telescope"
+                  (Did I use the telescope, or did the man have it?)
+
+  Context         "Apple released a new product"
+                  (Company or fruit? Depends on context.)
+
+  Sarcasm         "Oh great, another meeting."
+                  (Negative sentiment despite positive words)
+
+  Idioms          "It's raining cats and dogs"
+                  (Figurative, not literal)
+
+  Spelling errors  "I wnt to the strore"
+                  (Must be robust to noise)
+
+  Multiple languages, dialects, slang, domain jargon add further complexity.
+
+
+CORE NLP TASKS
+---------------
+
+1. TOKENIZATION
+   Breaking raw text into individual units (tokens: words, subwords, sentences).
+
+   Input  : "Natural Language Processing is amazing!"
+   Output : ["Natural", "Language", "Processing", "is", "amazing", "!"]
+
+   Types:
+     Word tokenization     — split by whitespace and punctuation
+     Sentence tokenization — split into individual sentences
+     Subword tokenization  — BPE, WordPiece (used in LLMs like BERT, GPT)
+     Character tokenization — split into individual characters
+
+
+2. TEXT NORMALIZATION
+   Standardizing text for consistent processing.
+
+   Lowercasing        "Hello" → "hello"
+   Punctuation removal "hello!" → "hello"
+   Stopword removal   "the cat sat" → "cat sat"
+   Stemming           "running" → "run"
+   Lemmatization      "better" → "good" (context-aware)
+
+
+3. PART-OF-SPEECH (POS) TAGGING
+   Labeling each word with its grammatical role.
+
+   Input  : "The dog barked loudly"
+   Output : [("The", DET), ("dog", NOUN), ("barked", VERB), ("loudly", ADV)]
+
+   Common POS tags:
+     NN   Noun          VB   Verb
+     JJ   Adjective     RB   Adverb
+     DT   Determiner    IN   Preposition
+     PRP  Pronoun       CC   Conjunction
+
+
+4. NAMED ENTITY RECOGNITION (NER)
+   Identifying and classifying named entities in text.
+
+   Input  : "Elon Musk founded SpaceX in Hawthorne, California in 2002."
+   Output :
+     Elon Musk    → PERSON
+     SpaceX       → ORGANIZATION
+     Hawthorne    → LOCATION
+     California   → LOCATION
+     2002         → DATE
+
+   Entity types: PERSON, ORG, GPE (geo-political), DATE, MONEY, PRODUCT, EVENT
+
+
+5. SENTIMENT ANALYSIS
+   Determining the emotional tone or opinion expressed in text.
+
+   Input  : "The product quality is excellent but delivery was terrible."
+   Output : Overall: MIXED | Aspect: quality=POSITIVE, delivery=NEGATIVE
+
+   Levels:
+     Document-level   — overall sentiment of a document
+     Sentence-level   — sentiment per sentence
+     Aspect-level     — sentiment toward specific attributes
+
+
+6. TEXT CLASSIFICATION
+   Assigning predefined categories to text.
+
+   Examples:
+     Spam detection    : "Win a free iPhone!" → SPAM
+     Topic labeling    : Article about markets → FINANCE
+     Intent detection  : "Book a flight" → BOOK_TRAVEL
+     Language ID       : "Bonjour" → FRENCH
+
+   Methods: Naive Bayes, Logistic Regression, BERT fine-tuning
+
+
+7. INFORMATION EXTRACTION
+   Pulling structured data from unstructured text.
+
+   Input  : "Apple signed a $3B deal with Samsung on Monday."
+   Output :
+     Entity 1    : Apple (ORG)
+     Entity 2    : Samsung (ORG)
+     Relation    : signed_deal
+     Amount      : $3B
+     Date        : Monday
+
+
+8. MACHINE TRANSLATION
+   Automatically translating text from one language to another.
+
+   Input  : "Hello, how are you?" (English)
+   Output : "Bonjour, comment allez-vous?" (French)
+
+   Approaches:
+     Rule-based MT       — linguistic rules (outdated)
+     Statistical MT      — phrase-based probabilities
+     Neural MT (NMT)     — seq2seq with attention (current standard)
+     LLM-based MT        — GPT-4, Claude, Gemini (best quality)
+
+
+9. TEXT SUMMARIZATION
+   Condensing long documents into shorter summaries.
+
+   Extractive  — select and combine existing sentences from the document
+   Abstractive — generate new sentences that capture the key points
+
+   Use cases: news summarization, legal document summaries, meeting notes
+
+
+10. QUESTION ANSWERING (QA)
+    Automatically answering questions posed in natural language.
+
+    Types:
+      Extractive QA   — find the answer span in a document
+      Abstractive QA  — generate an answer from understanding
+      Open-domain QA  — retrieve + answer from a large knowledge base
+      Closed-domain QA — answer within a specific domain (e.g., medical)
+
+
+11. TEXT GENERATION
+    Producing coherent and contextually relevant text.
+
+    Applications:
+      Story generation, dialogue systems, email drafting,
+      code generation, data augmentation, creative writing
+
+    Models: GPT-4, Claude, LLaMA, Mistral, T5
+
+
+12. COREFERENCE RESOLUTION
+    Identifying when different expressions refer to the same entity.
+
+    Input  : "John went to the store. He bought milk."
+    Output : "He" → "John"
+
+
+13. DEPENDENCY PARSING
+    Analyzing grammatical structure and relationships between words.
+
+    Input  : "The cat chased the mouse"
+    Output : chased → ROOT
+             cat    → nsubj (nominal subject) of chased
+             mouse  → dobj  (direct object)  of chased
+             The    → det   (determiner)      of cat
+
+
+14. SEMANTIC SIMILARITY
+    Measuring how similar two pieces of text are in meaning.
+
+    "The car is fast"  vs  "The vehicle is quick"  →  High similarity
+    "I love pizza"     vs  "The sky is blue"        →  Low similarity
+
+    Methods: cosine similarity on embeddings, BERTScore
+
+
+NLP PIPELINE (END-TO-END)
+--------------------------
+
+  Raw Text
+    ↓
+  Text Preprocessing    (cleaning, normalization, tokenization)
+    ↓
+  Feature Extraction    (TF-IDF, word embeddings, BERT embeddings)
+    ↓
+  Model               (classifier, seq2seq, LLM, etc.)
+    ↓
+  Post-processing     (output formatting, entity linking, ranking)
+    ↓
+  Application Output  (answer, label, summary, translation)
+
+
+NLP APPROACHES OVER TIME
+--------------------------
+
+  ERA 1 — Rule-Based NLP (1950s–1980s)
+    Hand-crafted linguistic rules and dictionaries
+    Brittle, hard to scale, language-specific
+    Tools: NLTK rule sets, regex patterns
+
+  ERA 2 — Statistical NLP (1990s–2000s)
+    Probabilistic models trained on text corpora
+    n-gram language models, HMM, CRF
+    Tools: NLTK, Stanford NLP
+
+  ERA 3 — Machine Learning NLP (2000s–2010s)
+    Feature engineering + supervised learning
+    SVM, Naive Bayes, Logistic Regression
+    Word2Vec, GloVe (dense word embeddings — 2013)
+    Tools: scikit-learn, gensim
+
+  ERA 4 — Deep Learning NLP (2015–2018)
+    RNNs, LSTMs, GRUs for sequential modeling
+    Encoder-Decoder with attention (seq2seq)
+    ELMo — contextualized word representations
+    Tools: TensorFlow, PyTorch, Keras
+
+  ERA 5 — Transformer Era (2018–present)
+    "Attention Is All You Need" (Vaswani et al., 2017)
+    BERT (2018) — bidirectional encoder, masked LM
+    GPT (2018) — autoregressive decoder
+    GPT-2, RoBERTa, XLNet, T5 (2019)
+    GPT-3 (2020) — 175B params, few-shot capability
+    ChatGPT (2022), GPT-4, Claude, LLaMA, Mistral (2023+)
+    Tools: Hugging Face Transformers, Anthropic SDK, OpenAI SDK
+
+
+KEY NLP CONCEPTS
+-----------------
+
+  Word Embeddings
+    Dense vector representations of words
+    Capture semantic meaning: king - man + woman ≈ queen
+    Word2Vec, GloVe, FastText (static)
+    BERT, GPT embeddings (contextual — same word, different vectors)
+
+  Attention Mechanism
+    Allows the model to focus on relevant parts of the input
+    Self-attention: each token attends to all other tokens
+    Foundation of the Transformer architecture
+
+  Transfer Learning
+    Pre-train on large corpus → fine-tune on specific task
+    BERT pre-trained on Wikipedia → fine-tune for NER
+    Reduces need for large task-specific labeled datasets
+
+  Context Window
+    Maximum number of tokens the model can process at once
+    GPT-2: 1,024 tokens
+    BERT: 512 tokens
+    GPT-4: 128,000 tokens
+    Claude: up to 200,000 tokens
+
+  Perplexity
+    Measures how well a language model predicts a text sample
+    Lower perplexity = better model
+    Formula: PP(W) = P(w1, w2, ..., wN)^(-1/N)
+
+
+NLP EVALUATION METRICS
+------------------------
+
+  Task                Metrics
+  ──────────────────────────────────────────────────────
+  Classification      Accuracy, Precision, Recall, F1
+  NER                 Entity-level F1, Span F1
+  Translation         BLEU, METEOR, chrF
+  Summarization       ROUGE-1, ROUGE-2, ROUGE-L
+  Generation quality  BERTScore, BLEURT, human eval
+  Language modeling   Perplexity
+  Semantic similarity Pearson/Spearman correlation
+
+
+KEY NLP LIBRARIES & TOOLS
+---------------------------
+
+  Library             Use Case
+  ──────────────────────────────────────────────────────
+  NLTK                Classic NLP: tokenize, stem, POS, NER
+  spaCy               Industrial NLP: fast, production-ready
+  Gensim              Topic modeling, Word2Vec, Doc2Vec
+  Hugging Face        Pre-trained transformers (BERT, GPT, T5)
+  scikit-learn        ML pipelines, TF-IDF, vectorizers
+  TextBlob            Simple sentiment, POS tagging
+  Stanford NLP        CoreNLP — Java-based, deep linguistic analysis
+  Stanza              Stanford NLP in Python
+  AllenNLP            Research-focused NLP (Allen Institute)
+  FastText            Facebook's word embeddings + text classifier
+  sentence-transformers Semantic similarity, embeddings
+
+
+REAL-WORLD NLP APPLICATIONS
+-----------------------------
+
+  Domain              Application
+  ──────────────────────────────────────────────────────────────────────
+  Customer Support    Chatbots, ticket classification, intent detection
+  Healthcare          Clinical NER, medical coding, patient notes summary
+  Finance             Sentiment analysis on news, earnings call analysis
+  Legal               Contract analysis, clause extraction, compliance
+  E-Commerce          Product review analysis, search, recommendations
+  HR                  Resume parsing, job description matching
+  Data Engineering    Log parsing, pipeline documentation, SQL generation
+  Social Media        Trend detection, misinformation detection
+  Search              Query understanding, document ranking, autocomplete
+  Translation         Real-time multilingual communication
+
+
+NLP vs LLMs — RELATIONSHIP
+----------------------------
+
+  Traditional NLP           LLMs (Large Language Models)
+  ──────────────────────────────────────────────────────────
+  Task-specific models      One model, many tasks
+  Rule-based + statistical  Neural, end-to-end learned
+  Small datasets OK         Needs massive data (trillions of tokens)
+  Fast, cheap inference     Slower, more expensive
+  Explainable              Hard to interpret
+  BERT, spaCy, NLTK        GPT-4, Claude, LLaMA, Mistral
+
+  LLMs are built ON TOP of NLP research. They incorporate:
+    • Tokenization (BPE, SentencePiece)
+    • Language modeling (next-token prediction)
+    • Embeddings (contextualized vectors)
+    • All NLP tasks as emergent capabilities
+
+
+SUMMARY
+--------
+NLP enables machines to understand and work with human language.
+
+Core areas:
+  • Text preprocessing     — clean and normalize raw text
+  • Syntax analysis        — tokenization, POS tagging, parsing
+  • Semantic analysis      — NER, coreference, semantic similarity
+  • Discourse analysis     — coherence, summarization, QA
+  • Generative tasks       — translation, generation, dialogue
+
+Evolution:
+  Rules → Statistics → ML → Deep Learning → Transformers → LLMs
+
+NLP is the foundation on which modern AI assistants, search engines,
+chatbots, translation services, and LLMs are built. Every time you
+interact with Siri, Google Search, Gmail autocomplete, or ChatGPT,
+you are using NLP.
