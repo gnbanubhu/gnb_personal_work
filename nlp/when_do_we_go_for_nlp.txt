@@ -1,0 +1,341 @@
+WHEN DO WE GO FOR NATURAL LANGUAGE PROCESSING (NLP)?
+======================================================
+
+OVERVIEW
+---------
+NLP is the right choice when your problem involves understanding,
+processing, or generating human language. However, not every
+text-related problem requires NLP — sometimes simpler approaches
+like regex, keyword rules, or traditional ML are sufficient.
+
+Knowing WHEN to apply NLP — and at what level of complexity —
+is as important as knowing how to use it.
+
+  Decision principle:
+    Start simple → add complexity only when simpler approaches fail.
+    Regex → Rule-based → Classical ML → NLP models → LLMs
+
+
+WHEN TO USE NLP
+----------------
+
+1. INPUT IS UNSTRUCTURED FREE-FORM TEXT
+   Use NLP when your data is natural language that cannot be
+   processed with simple rules or structured queries.
+
+   Go for NLP when:
+     • Customer emails, reviews, feedback need to be analyzed
+     • Support tickets must be classified and routed automatically
+     • Documents (PDFs, contracts, reports) must be parsed for insights
+     • Social media posts need sentiment or topic analysis
+     • Medical notes or legal text must be mined for entities
+
+   Do NOT use NLP when:
+     • Input is already structured (CSV, JSON, database records)
+     • Pattern is highly regular (dates, phone numbers → use regex)
+
+
+2. TASK REQUIRES LANGUAGE UNDERSTANDING
+   Use NLP when the meaning, context, or intent behind words matters —
+   not just the presence of keywords.
+
+   Go for NLP when:
+     • "not bad" should be classified as positive (negation handling)
+     • "Apple" means a company in one context, a fruit in another
+     • "Can you help me?" is a question but the intent is a request
+     • "It's raining cats and dogs" must not be taken literally
+     • A search for "fast vehicle" should match "quick car"
+
+   Do NOT use NLP when:
+     • Exact keyword matching is sufficient (log file contains "ERROR")
+     • Structured field lookup is enough (field == "CANCELLED")
+
+
+3. CLASSIFICATION OF TEXT INTO CATEGORIES
+   Use NLP when text must be labeled with one or more categories.
+
+   Go for NLP when:
+     • Classifying customer intent: billing, technical, general inquiry
+     • Detecting spam vs. legitimate email
+     • Labeling news articles by topic: sports, politics, finance
+     • Identifying language of a document
+     • Detecting urgency or priority of support tickets
+
+   Model choices:
+     Few categories, little data   → Zero-shot with LLM
+     Many categories, labeled data → Fine-tuned BERT / classifier
+     Real-time, high volume        → Fine-tuned small model (DistilBERT)
+
+
+4. INFORMATION EXTRACTION FROM TEXT
+   Use NLP when you need to pull structured facts from unstructured text.
+
+   Go for NLP when:
+     • Extract names, dates, amounts from invoices or contracts
+     • Pull diagnoses and medications from clinical notes
+     • Identify product names, prices, and attributes from descriptions
+     • Extract relationships: "Company X acquired Company Y for $Z"
+     • Parse résumés to fill structured candidate profiles
+
+   Techniques: Named Entity Recognition (NER), Relation Extraction,
+               Information Extraction pipelines, LLM-based extraction
+
+
+5. SEMANTIC SEARCH (SEARCH BY MEANING)
+   Use NLP when users search with natural language and keyword
+   matching returns poor or irrelevant results.
+
+   Go for NLP when:
+     • Users search "fast car" but documents say "high-speed vehicle"
+     • Internal knowledge base search returns nothing for paraphrased queries
+     • Product search needs to understand intent beyond exact match
+     • Support articles must be retrieved by conceptual similarity
+
+   Go for keyword search (BM25) when:
+     • Exact matches matter (product IDs, error codes, named entities)
+     • Latency is critical and semantic search overhead is not acceptable
+
+   Best practice: Hybrid search (BM25 + semantic) gives best results
+
+
+6. SENTIMENT AND OPINION ANALYSIS
+   Use NLP when you need to understand the tone, emotion, or
+   opinion expressed in text.
+
+   Go for NLP when:
+     • Analyze thousands of product reviews for quality signals
+     • Monitor brand reputation on social media
+     • Measure employee satisfaction from open-ended survey responses
+     • Track customer sentiment over time after a product launch
+     • Detect negative sentiment in support tickets for escalation
+
+   Simple case: TextBlob or VADER (rule-based, fast, no training needed)
+   Complex case: Fine-tuned BERT for aspect-level sentiment
+
+
+7. TEXT SUMMARIZATION
+   Use NLP when you need to condense long documents automatically.
+
+   Go for NLP when:
+     • Summarize 100-page reports into executive summaries
+     • Generate meeting notes from transcripts
+     • Produce product descriptions from detailed specifications
+     • Condense news articles for digests
+     • Summarize customer chat histories for agents
+
+   Extractive summarization: select top sentences (fast, interpretable)
+   Abstractive summarization: generate new text (better quality, uses LLM)
+
+
+8. QUESTION ANSWERING OVER DOCUMENTS
+   Use NLP when users need answers from large document collections
+   and manual lookup is impractical.
+
+   Go for NLP when:
+     • Engineers ask questions about internal runbooks and architecture docs
+     • Customers ask product questions answered in documentation
+     • Legal teams need answers from hundreds of contracts
+     • Support agents need instant answers from a knowledge base
+     • Students query textbooks with natural language questions
+
+   Pattern: RAG (Retrieval-Augmented Generation) — retrieve relevant
+   chunks → inject into LLM prompt → generate grounded answer
+
+
+9. NAMED ENTITY RECOGNITION (NER)
+   Use NLP when you need to identify and classify entities in text.
+
+   Go for NLP when:
+     • Extract person names, organizations, locations from news
+     • Pull drug names, dosages, side effects from medical text
+     • Identify financial entities: tickers, companies, currencies
+     • Tag legal entities: parties, dates, jurisdiction, clauses
+     • Anonymize PII (names, SSNs, addresses) for data privacy
+
+   Tools: spaCy (fast, production), Hugging Face NER models,
+          custom fine-tuned models for domain-specific entities
+
+
+10. MACHINE TRANSLATION
+    Use NLP when text must be converted from one language to another.
+
+    Go for NLP when:
+      • Serve global customers without hiring translators for each language
+      • Translate product listings, documentation, or support articles
+      • Analyze multilingual customer feedback in a unified pipeline
+      • Enable real-time cross-language communication
+
+    Tools: Helsinki-NLP (Hugging Face), Google Translate API,
+           DeepL API, Claude / GPT-4 for high-quality translation
+
+
+11. TEXT GENERATION
+    Use NLP / LLMs when you need to produce human-quality text automatically.
+
+    Go for NLP when:
+      • Generate SQL queries from natural language descriptions
+      • Auto-generate data pipeline documentation from schema
+      • Draft email responses to customer inquiries
+      • Create product descriptions from structured attributes
+      • Generate test cases from function signatures
+      • Produce incident post-mortems from logs and metrics
+
+    Simple generation: template + rules (fast, deterministic)
+    Complex generation: LLM (flexible, high quality, context-aware)
+
+
+12. CONVERSATIONAL AI / CHATBOTS
+    Use NLP when you need a system that holds multi-turn dialogues
+    and maintains context across the conversation.
+
+    Go for NLP when:
+      • Customer support chatbot handles billing, tech, and general queries
+      • Internal HR bot answers policy and benefits questions
+      • Data exploration assistant interprets follow-up questions
+        ("show sales last month" → "now filter by region")
+      • Interactive debugging assistant for engineers
+
+    Tools: LangChain / LlamaIndex for orchestration,
+           Claude / GPT-4 for response generation,
+           Vector DB for persistent memory
+
+
+13. FEW-SHOT OR ZERO-SHOT SCENARIOS
+    Use NLP / LLMs when you have little or no labeled training data.
+
+    Go for NLP when:
+      • New task with no training data available
+      • Quickly prototype a classifier with 2-3 examples
+      • Domain-specific task with scarce labeled examples
+      • Exploratory analysis before committing to full model training
+
+    LLM zero-shot: describe the task in the prompt → works immediately
+    LLM few-shot:  include 2-5 examples in the prompt → higher accuracy
+
+
+14. MULTI-LINGUAL OR CROSS-LINGUAL TASKS
+    Use NLP when the same pipeline must handle multiple languages.
+
+    Go for NLP when:
+      • Analyze customer feedback from users in 30+ countries
+      • Build a single chatbot for a global product
+      • Search documents written in different languages
+      • Detect language automatically and route accordingly
+
+    Tools: mBERT, XLM-RoBERTa (multilingual), LLaMA / Claude (multilingual)
+
+
+WHEN NOT TO USE NLP
+--------------------
+
+  Situation                              Better Alternative
+  ──────────────────────────────────────────────────────────────────────
+  Text matches a fixed pattern           Regex (email, phone, date)
+  Lookup in a predefined list            Dictionary / hash map match
+  Structured tabular data analysis       Pandas, SQL, traditional ML
+  Exact string matching in logs          grep, string contains()
+  Simple keyword-based search            Elasticsearch BM25
+  Binary rule: contains word X → action  If-else / keyword rules
+  Deterministic output required          Rule-based templating
+  Sub-millisecond latency required       Lookup table or simple rules
+  Very small, fixed vocabulary           Enum / switch-case logic
+  Numerical forecasting                  Time-series ML (Prophet, ARIMA)
+
+
+NLP COMPLEXITY LADDER
+----------------------
+Choose the simplest approach that solves the problem.
+
+  Level 1 — Regex / Rules
+    When: fixed patterns, keyword detection, simple extraction
+    Tools: Python re module, string methods
+    Example: extract email addresses, detect "ERROR" in logs
+
+  Level 2 — Statistical NLP
+    When: text needs basic normalization, frequency analysis
+    Tools: NLTK, scikit-learn TF-IDF, CountVectorizer
+    Example: keyword frequency, simple document classification
+
+  Level 3 — Classical ML + NLP Features
+    When: classification with labeled data, moderate complexity
+    Tools: scikit-learn + TF-IDF, spaCy features
+    Example: spam detection, intent classification with labeled data
+
+  Level 4 — Pre-trained NLP Models (BERT, spaCy)
+    When: NER, POS, dependency parsing, semantic similarity
+    Tools: spaCy, Hugging Face sentence-transformers
+    Example: NER pipeline, semantic search, text classification
+
+  Level 5 — Fine-tuned Transformer Models
+    When: domain-specific tasks, high accuracy required
+    Tools: Hugging Face Transformers + PEFT / LoRA
+    Example: medical NER, legal clause classification
+
+  Level 6 — LLMs via API
+    When: complex reasoning, generation, zero-shot tasks
+    Tools: Claude, GPT-4, LLaMA via Anthropic/OpenAI SDK
+    Example: RAG Q&A, document summarization, SQL generation
+
+  Level 7 — Fine-tuned LLMs
+    When: domain adaptation, custom behavior, data privacy
+    Tools: QLoRA fine-tuning, Hugging Face TRL
+    Example: company-specific chatbot, specialized code assistant
+
+
+NLP DECISION MATRIX
+---------------------
+
+  Use Case                           Use NLP?   Level      Reason
+  ──────────────────────────────────────────────────────────────────────
+  Detect "ERROR" in log file         NO         Regex      Exact match
+  Classify customer intent           YES        4–6        Language understanding
+  Extract invoice amounts            MAYBE      1–4        Regex if structured, NLP if free text
+  Semantic document search           YES        4–5        Meaning-based retrieval
+  Translate product descriptions     YES        6          Neural MT or LLM
+  Analyze 1M product reviews         YES        3–5        Sentiment at scale
+  Answer questions from docs (RAG)   YES        6          LLM + retrieval
+  Detect spam email                  YES        3–4        Classification model
+  Parse structured JSON field        NO         —          Direct field access
+  Summarize meeting transcripts      YES        6          Abstractive LLM
+  NER in medical records             YES        5          Fine-tuned clinical NER
+  Forecast monthly sales             NO         —          Time-series ML
+  Route support tickets              YES        4–6        Intent + classification
+  Generate SQL from natural language YES        6          LLM code generation
+
+
+COST vs COMPLEXITY TRADE-OFF
+------------------------------
+
+  Approach          Cost      Latency   Accuracy   Flexibility
+  ──────────────────────────────────────────────────────────────
+  Regex / Rules     Very Low  <1ms      Fixed       Low
+  TF-IDF + ML       Low       <10ms     Moderate    Moderate
+  spaCy / BERT      Medium    10–100ms  High        High
+  LLM API (Haiku)   Low       500ms+    Very High   Very High
+  LLM API (Sonnet)  Medium    1–3s      Excellent   Excellent
+  LLM API (Opus)    High      2–5s      Best        Best
+  Self-hosted LLM   Infra     Varies    High        High
+
+
+SUMMARY
+--------
+Go for NLP when:
+  ✔  Input is unstructured free-form text
+  ✔  Task requires understanding meaning, context, or intent
+  ✔  You need to classify, extract, summarize, or generate text
+  ✔  Semantic understanding matters (not just keyword matching)
+  ✔  You have little labeled data and need zero/few-shot approaches
+  ✔  Multi-turn conversations or complex reasoning are needed
+  ✔  Multiple languages must be handled in one pipeline
+
+Do NOT go for NLP when:
+  ✘  Input follows a fixed, predictable pattern (use regex)
+  ✘  Data is already structured (use SQL or traditional ML)
+  ✘  Sub-millisecond latency is required (use lookup tables)
+  ✘  100% deterministic outputs are needed (use rule-based logic)
+  ✘  A simpler approach already works well (don't over-engineer)
+
+Key principle:
+  Match the complexity of your NLP solution to the complexity
+  of your problem. Start simple, measure quality, and escalate
+  to more powerful models only when the simpler approach falls short.
