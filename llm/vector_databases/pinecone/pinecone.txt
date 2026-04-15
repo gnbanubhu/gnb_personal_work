@@ -1,0 +1,216 @@
+PINECONE — VECTOR DATABASE
+==========================
+
+Pinecone is a fully managed, cloud-native vector database designed for
+storing, indexing, and querying high-dimensional vector embeddings at scale.
+Unlike FAISS (a library you self-host), Pinecone is a SaaS product —
+you don't manage infrastructure at all.
+
+------------------------------------------------------------
+WHAT IS PINECONE?
+------------------------------------------------------------
+
+Pinecone provides a managed vector search service that handles:
+  - Storage of millions/billions of embeddings
+  - Fast approximate nearest neighbor (ANN) search
+  - Real-time updates (insert, update, delete)
+  - Metadata filtering alongside vector search
+  - Automatic scaling and replication
+
+You interact with it via a simple REST API or Python/Node.js SDK.
+
+------------------------------------------------------------
+WHY PINECONE OVER FAISS?
+------------------------------------------------------------
+
+FAISS (self-hosted)           | Pinecone (managed)
+------------------------------|-------------------------------
+You manage servers            | Fully managed, no infra work
+No built-in persistence       | Persistent by default
+No real-time updates easily   | Real-time insert/update/delete
+No metadata filtering         | Rich metadata filtering
+Manual scaling                | Auto-scales with your data
+Local/on-prem only            | Cloud-native, globally available
+Free & open-source            | Paid service (free tier available)
+
+Use FAISS when: you need full control, low cost, or on-prem deployment.
+Use Pinecone when: you want production-ready managed infra with zero ops.
+
+------------------------------------------------------------
+CORE CONCEPTS
+------------------------------------------------------------
+
+1. INDEX
+   ------
+   A Pinecone index is where vectors are stored.
+   Each index has:
+     - A fixed dimension (must match your embedding model)
+     - A distance metric: cosine, euclidean, or dotproduct
+     - A cloud region (AWS, GCP, Azure)
+
+   Example:
+     Dimension: 1536 (OpenAI text-embedding-ada-002)
+     Metric: cosine
+
+2. NAMESPACE
+   ----------
+   Namespaces partition data within a single index.
+   Useful for multi-tenant apps (e.g., one namespace per user/org).
+   Queries are scoped to a namespace.
+
+3. VECTOR
+   -------
+   Each vector record has:
+     - id       : unique string identifier
+     - values   : the embedding (list of floats)
+     - metadata : optional key-value pairs for filtering
+
+   Example:
+     {
+       "id": "doc-001",
+       "values": [0.12, 0.87, 0.45, ...],
+       "metadata": {"source": "blog", "category": "AI", "year": 2024}
+     }
+
+4. UPSERT
+   -------
+   Pinecone uses "upsert" — insert if new, update if ID exists.
+   This simplifies data management.
+
+5. QUERY
+   ------
+   Search for top-k most similar vectors to a query vector.
+   Can combine vector similarity with metadata filters.
+
+------------------------------------------------------------
+HOW PINECONE WORKS INTERNALLY
+------------------------------------------------------------
+
+                 Your App
+                    |
+             Pinecone SDK/API
+                    |
+          ┌─────────────────────┐
+          │    Pinecone Index   │
+          │                     │
+          │  [Vector Store]     │
+          │  [ANN Index]        │  ← Approximate Nearest Neighbor
+          │  [Metadata Store]   │  ← Filter by metadata
+          └─────────────────────┘
+                    |
+            Top-K Results
+          (vector IDs + scores)
+
+Steps:
+  1. Embed your data using an embedding model (OpenAI, Claude, etc.)
+  2. Upsert vectors + metadata into Pinecone
+  3. At query time, embed the user query
+  4. Send query vector to Pinecone
+  5. Pinecone returns top-K most similar vector IDs + scores
+  6. Use IDs to fetch full content from your database
+
+------------------------------------------------------------
+PINECONE IN A RAG PIPELINE
+------------------------------------------------------------
+
+Documents
+   ↓
+Chunking (split into paragraphs)
+   ↓
+Embedding Model (e.g., OpenAI, Claude)
+   ↓
+Pinecone (store vectors + metadata)
+
+                   ← At Query Time →
+
+User Query
+   ↓
+Embed Query
+   ↓
+Pinecone Search (top-K similar chunks)
+   ↓
+Retrieved Chunks → LLM Prompt → Answer
+
+------------------------------------------------------------
+DISTANCE METRICS
+------------------------------------------------------------
+
+Metric        | Best For                          | Formula
+--------------|-----------------------------------|--------------------
+cosine        | Semantic similarity (NLP/text)    | 1 - cos(A, B)
+euclidean     | Geometric distance in space       | sqrt(sum((A-B)^2))
+dotproduct    | Max inner product search          | A · B
+
+Most LLM embedding use cases → use cosine similarity.
+
+------------------------------------------------------------
+METADATA FILTERING
+------------------------------------------------------------
+
+A powerful Pinecone feature: filter results by metadata BEFORE
+or DURING vector search, reducing the candidate set.
+
+Example — search only within "AI" category from 2024:
+
+  index.query(
+      vector=query_embedding,
+      top_k=5,
+      filter={"category": {"$eq": "AI"}, "year": {"$gte": 2024}}
+  )
+
+Supported operators: $eq, $ne, $gt, $gte, $lt, $lte, $in, $nin
+
+------------------------------------------------------------
+PINECONE PLANS
+------------------------------------------------------------
+
+Tier       | Vectors     | Features
+-----------|-------------|-------------------------------------
+Free       | 100K        | 1 project, 1 index, shared infra
+Starter    | Millions    | More indexes, higher throughput
+Standard   | Billions    | Dedicated resources, SLA guarantee
+Enterprise | Unlimited   | Custom SLA, private deployment
+
+------------------------------------------------------------
+PINECONE vs OTHER VECTOR DATABASES
+------------------------------------------------------------
+
+Feature           | Pinecone | FAISS | Chroma | Weaviate | Qdrant
+------------------|----------|-------|--------|----------|--------
+Managed service   | Yes      | No    | No     | Yes      | Yes
+Real-time updates | Yes      | No    | Yes    | Yes      | Yes
+Metadata filter   | Yes      | No    | Yes    | Yes      | Yes
+Scales to billions| Yes      | Yes   | No     | Yes      | Yes
+Free tier         | Yes      | N/A   | Free   | Yes      | Yes
+On-prem option    | No       | Yes   | Yes    | Yes      | Yes
+Ease of setup     | Easiest  | Hard  | Easy   | Medium   | Medium
+
+------------------------------------------------------------
+WHEN TO USE PINECONE
+------------------------------------------------------------
+
+  ✔ You want a production-ready vector DB with zero infrastructure work
+  ✔ You need real-time insert/update/delete of vectors
+  ✔ You need metadata filtering alongside vector search
+  ✔ You are building a RAG application or semantic search at scale
+  ✔ Your team doesn't want to manage servers, scaling, or replication
+  ✔ You need multi-tenancy via namespaces
+
+  ✘ Avoid if: you need on-prem deployment, or cost is a hard constraint
+    (FAISS or Chroma may be better for local/free setups)
+
+------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------
+
+Pinecone is the go-to managed vector database for production AI applications.
+It removes all infrastructure complexity and lets you focus on building —
+store embeddings, search by similarity, filter by metadata, and scale
+automatically. It is the backbone of many enterprise RAG systems,
+semantic search engines, and AI-powered recommendation systems.
+
+Key strengths:
+  - Zero ops: fully managed, auto-scaling
+  - Real-time: instant upsert and delete
+  - Hybrid search: vectors + metadata filters
+  - Enterprise-ready: SLA, security, global availability
