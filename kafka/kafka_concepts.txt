@@ -1,0 +1,541 @@
+APACHE KAFKA — CONCEPTS
+========================
+
+Apache Kafka is an open-source distributed event streaming platform
+originally developed by LinkedIn and donated to the Apache Software
+Foundation in 2011. It is designed to handle high-throughput, fault-tolerant,
+real-time data streaming at massive scale — processing trillions of events
+per day at companies like LinkedIn, Uber, Netflix, Airbnb, and Twitter.
+
+------------------------------------------------------------
+WHAT IS KAFKA?
+------------------------------------------------------------
+
+Kafka is fundamentally a distributed commit log — an ordered, immutable
+sequence of records that can be read by multiple consumers independently.
+
+  Traditional Message Queue:        Apache Kafka:
+  ┌──────────┐   ┌──────────┐      ┌──────────┐   ┌──────────┐
+  │ Producer │──►│  Queue   │──►   │ Producer │──►│  Topic   │──► Consumer A
+  └──────────┘   └──────────┘      └──────────┘   │  (Log)   │──► Consumer B
+                 (msg deleted                      └──────────┘──► Consumer C
+                  after consumed)                 (msg retained for configurable time)
+
+Key difference:
+  - Traditional queues: message deleted after one consumer reads it
+  - Kafka: message retained (days/weeks), multiple consumers read independently
+  - Kafka is both a message queue AND a storage system AND a stream processor
+
+
+------------------------------------------------------------
+CORE KAFKA CONCEPTS
+------------------------------------------------------------
+
+1. EVENT (Message / Record)
+   -------------------------
+   The fundamental unit of data in Kafka.
+   An event is an immutable record of something that happened.
+
+   Structure of a Kafka Event:
+   ┌──────────────────────────────────────────────┐
+   │  Key      : "user-123"  (optional)           │
+   │  Value    : {"action": "purchase", ...}      │
+   │  Timestamp: 2024-01-15T10:30:00Z             │
+   │  Headers  : {"source": "web-app"}  (optional)│
+   │  Offset   : 4523  (position in partition)    │
+   └──────────────────────────────────────────────┘
+
+   - Key   : Used for partitioning (same key → same partition)
+   - Value : The actual payload (JSON, Avro, Protobuf, String)
+   - Offset: Unique ID within a partition (monotonically increasing)
+
+
+2. TOPIC
+   ------
+   A topic is a named channel to which events are written and from which
+   events are read. Think of it like a folder or a database table.
+
+   Examples of topics:
+     - orders
+     - payments
+     - user-clicks
+     - inventory-updates
+     - shipment-events
+
+   Properties:
+     - Topics are append-only — producers only add to the end
+     - Topics are divided into partitions for scalability
+     - Topics have a configurable retention period (default: 7 days)
+     - Topics can be compacted (keep only latest value per key)
+
+   Topic Types:
+     Regular    : Retain all events for a configured time
+     Compacted  : Keep only the latest record per key (like a key-value store)
+
+
+3. PARTITION
+   ----------
+   A topic is split into one or more partitions for parallelism and scalability.
+   Each partition is an ordered, immutable sequence of records.
+
+   Topic: "orders" with 3 partitions:
+   ┌─────────────────────────────────────────────────┐
+   │ Partition 0: [msg0] [msg1] [msg4] [msg7] ...    │
+   │ Partition 1: [msg2] [msg5] [msg8] [msg11] ...   │
+   │ Partition 2: [msg3] [msg6] [msg9] [msg12] ...   │
+   └─────────────────────────────────────────────────┘
+
+   Key facts about partitions:
+     - Messages within a partition are strictly ordered
+     - Ordering is NOT guaranteed across partitions
+     - Each partition is stored on one broker (+ replicas on others)
+     - More partitions = more parallelism = higher throughput
+     - Partitioning strategy:
+         * Key provided  → hash(key) % num_partitions → same key, same partition
+         * No key        → round-robin across partitions
+
+   Offset:
+     - Each message in a partition has a unique sequential offset (0, 1, 2, ...)
+     - Consumers track their position using offsets
+     - Offsets are per-partition (not global)
+
+
+4. BROKER
+   -------
+   A Kafka broker is a single Kafka server.
+   A Kafka cluster consists of multiple brokers working together.
+
+   ┌────────────────────────────────────────────┐
+   │              KAFKA CLUSTER                 │
+   │                                            │
+   │  ┌──────────┐  ┌──────────┐  ┌──────────┐ │
+   │  │ Broker 1 │  │ Broker 2 │  │ Broker 3 │ │
+   │  │          │  │          │  │          │ │
+   │  │ P0 (L)   │  │ P1 (L)   │  │ P2 (L)   │ │
+   │  │ P1 (R)   │  │ P2 (R)   │  │ P0 (R)   │ │
+   │  │ P2 (R)   │  │ P0 (R)   │  │ P1 (R)   │ │
+   │  └──────────┘  └──────────┘  └──────────┘ │
+   │                                            │
+   │  L = Leader partition                      │
+   │  R = Replica partition                     │
+   └────────────────────────────────────────────┘
+
+   - Producers write to the Leader partition of a broker
+   - Consumers read from the Leader partition
+   - Replicas are kept in sync on follower brokers
+   - If a broker fails, a follower is elected as new Leader
+
+
+5. PRODUCER
+   ---------
+   A producer is an application that writes (publishes) events to Kafka topics.
+
+   Producer Flow:
+   ┌─────────────────────────────────────────────────┐
+   │  Application creates event                      │
+   │         ↓                                       │
+   │  Serialize (JSON / Avro / Protobuf)             │
+   │         ↓                                       │
+   │  Partitioner decides which partition            │
+   │  (based on key hash or round-robin)             │
+   │         ↓                                       │
+   │  Batch messages in memory (for efficiency)      │
+   │         ↓                                       │
+   │  Send batch to Kafka broker (Leader)            │
+   └─────────────────────────────────────────────────┘
+
+   Producer Acknowledgment Modes (acks):
+     acks=0  : Fire and forget — no confirmation (fastest, may lose data)
+     acks=1  : Leader acknowledges — moderate reliability
+     acks=all: All ISR replicas acknowledge — strongest guarantee (slowest)
+
+   Idempotent Producer:
+     - Enable idempotence=true to prevent duplicate messages on retries
+     - Kafka assigns a producer ID + sequence number to deduplicate
+
+
+6. CONSUMER
+   ---------
+   A consumer is an application that reads (subscribes to) events from topics.
+
+   Consumer Flow:
+   ┌─────────────────────────────────────────────────┐
+   │  Subscribe to topic(s)                          │
+   │         ↓                                       │
+   │  Poll for new messages                          │
+   │         ↓                                       │
+   │  Deserialize message                            │
+   │         ↓                                       │
+   │  Process message                                │
+   │         ↓                                       │
+   │  Commit offset (mark as processed)              │
+   └─────────────────────────────────────────────────┘
+
+   Offset Commit Strategies:
+     Auto commit    : Kafka commits offset periodically (may reprocess on failure)
+     Manual commit  : Application commits offset after successful processing
+                      (at-least-once or exactly-once delivery)
+
+   Consumer reads from the beginning or from a specific offset:
+     auto.offset.reset=earliest → read all historical messages
+     auto.offset.reset=latest   → read only new messages
+
+
+7. CONSUMER GROUP
+   ---------------
+   A consumer group is a set of consumers that cooperate to consume a topic.
+   Each partition is consumed by exactly ONE consumer in the group.
+
+   Topic "orders" with 3 partitions, Consumer Group "order-processor":
+
+   ┌─────────────────────────────────────────────────────┐
+   │  Partition 0 ──────────────► Consumer A             │
+   │  Partition 1 ──────────────► Consumer B             │
+   │  Partition 2 ──────────────► Consumer C             │
+   └─────────────────────────────────────────────────────┘
+
+   If Consumer B fails:
+   ┌─────────────────────────────────────────────────────┐
+   │  Partition 0 ──────────────► Consumer A             │
+   │  Partition 1 ──────────────► Consumer A (rebalanced)│
+   │  Partition 2 ──────────────► Consumer C             │
+   └─────────────────────────────────────────────────────┘
+
+   Key rules:
+     - max parallelism = number of partitions
+     - consumers > partitions → some consumers are idle
+     - different consumer groups read the same topic independently
+     - each group maintains its own offset per partition
+
+   Multiple Consumer Groups on same topic:
+   ┌──────────────┐           ┌────────────────────────┐
+   │  Topic:      │──────────►│ Group: order-processor │ (fulfillment)
+   │  "orders"    │──────────►│ Group: analytics-svc   │ (reporting)
+   │              │──────────►│ Group: fraud-detector  │ (fraud check)
+   └──────────────┘           └────────────────────────┘
+   Each group gets ALL messages independently
+
+
+8. ZOOKEEPER / KRaft
+   ------------------
+   ZooKeeper (legacy):
+     - Kafka used ZooKeeper for cluster coordination and metadata storage
+     - Tracked: broker list, topic configs, partition leaders, consumer offsets
+     - Required a separate ZooKeeper cluster to run Kafka
+
+   KRaft (Kafka Raft — Kafka 3.3+ default):
+     - Kafka's built-in consensus protocol replacing ZooKeeper
+     - Kafka now manages its own metadata without external dependencies
+     - Simpler deployment, faster recovery, supports 1M+ partitions
+     - ZooKeeper is fully removed in Kafka 4.0+
+
+
+9. REPLICATION
+   -----------
+   Kafka replicates each partition across multiple brokers for fault tolerance.
+
+   Replication Factor:
+     - replication.factor=3 → 1 Leader + 2 Followers
+     - Can lose up to (replication.factor - 1) brokers without data loss
+
+   ISR (In-Sync Replicas):
+     - Set of replicas that are fully caught up with the Leader
+     - acks=all → producer waits for all ISR to acknowledge
+     - If a follower falls behind, it is removed from ISR
+
+   Leader Election:
+     - If Leader fails, Kafka elects a new Leader from ISR
+     - Happens automatically within seconds
+
+
+10. RETENTION POLICY
+    -----------------
+    Kafka retains messages based on configured policies:
+
+    Time-based   : Delete messages older than N days (default: 7 days)
+                   log.retention.hours=168
+
+    Size-based   : Delete oldest messages when topic exceeds size limit
+                   log.retention.bytes=1073741824  (1GB)
+
+    Log Compaction: Keep only the LATEST record per key
+                   Useful for: user profiles, inventory state, config changes
+                   Deleted keys: tombstone record (null value) marks deletion
+
+
+------------------------------------------------------------
+KAFKA DELIVERY SEMANTICS
+------------------------------------------------------------
+
+At-Most-Once:
+  - Message delivered 0 or 1 times
+  - No retries — message may be lost
+  - Use when: loss is acceptable (metrics, logs)
+
+At-Least-Once:
+  - Message delivered 1 or more times
+  - May produce duplicates on retry
+  - Consumer must be idempotent
+  - Most common default
+
+Exactly-Once:
+  - Message delivered exactly once, end-to-end
+  - Requires: idempotent producer + transactions + transactional consumer
+  - Use when: financial transactions, inventory updates, billing
+  - Slight performance overhead
+
+
+------------------------------------------------------------
+KAFKA STREAMS
+------------------------------------------------------------
+
+Kafka Streams is a Java library for building real-time stream processing
+applications directly on top of Kafka. No separate cluster needed.
+
+Key operations:
+  - filter()     : Keep only events matching a condition
+  - map()        : Transform each event
+  - groupBy()    : Group events by key
+  - aggregate()  : Accumulate values (count, sum, average)
+  - join()       : Join two streams or a stream with a table
+  - windowing()  : Process events in time windows (tumbling, sliding, session)
+
+Example flow:
+  Raw Clicks → Filter (product pages only) → Group by product_id
+             → Count per 5-minute window → Publish to trending-products topic
+
+
+------------------------------------------------------------
+KAFKA CONNECT
+------------------------------------------------------------
+
+Kafka Connect is a framework to stream data between Kafka and external systems
+without writing custom code.
+
+  Source Connectors: Pull data FROM external systems INTO Kafka
+    - MySQL → Kafka (Debezium CDC connector)
+    - PostgreSQL → Kafka
+    - S3 → Kafka
+    - REST API → Kafka
+
+  Sink Connectors: Push data FROM Kafka TO external systems
+    - Kafka → Elasticsearch
+    - Kafka → S3 / GCS
+    - Kafka → Snowflake / BigQuery
+    - Kafka → MongoDB
+
+  Common connectors:
+    Debezium     : CDC from MySQL, PostgreSQL, MongoDB, Oracle
+    Confluent S3 : Stream Kafka data to Amazon S3
+    JDBC         : Any JDBC-compatible database
+    Elasticsearch: Stream to Elasticsearch index
+
+
+------------------------------------------------------------
+KAFKA KEY CONFIGURATIONS
+------------------------------------------------------------
+
+PRODUCER CONFIGS:
+  bootstrap.servers    : Kafka broker addresses
+  key.serializer       : Serializer for message key (StringSerializer, etc.)
+  value.serializer     : Serializer for message value
+  acks                 : Acknowledgment level (0, 1, all)
+  retries              : Number of retry attempts on failure
+  batch.size           : Max bytes in a batch (default: 16KB)
+  linger.ms            : Wait time before sending batch (improves throughput)
+  compression.type     : none, gzip, snappy, lz4, zstd
+  enable.idempotence   : true → exactly-once delivery guarantee
+
+CONSUMER CONFIGS:
+  bootstrap.servers    : Kafka broker addresses
+  group.id             : Consumer group name
+  key.deserializer     : Deserializer for message key
+  value.deserializer   : Deserializer for message value
+  auto.offset.reset    : earliest | latest | none
+  enable.auto.commit   : true (auto) | false (manual commit)
+  auto.commit.interval.ms : How often to auto-commit (default: 5000ms)
+  max.poll.records     : Max records returned per poll (default: 500)
+  session.timeout.ms   : Time before consumer is considered dead
+
+TOPIC CONFIGS:
+  num.partitions       : Number of partitions (default: 1)
+  replication.factor   : Number of replicas (recommended: 3)
+  retention.ms         : Message retention time (default: 604800000 = 7 days)
+  retention.bytes      : Max size per partition before deletion
+  cleanup.policy       : delete | compact | compact,delete
+  min.insync.replicas  : Min ISR to acknowledge writes (use with acks=all)
+
+
+------------------------------------------------------------
+KAFKA SERIALIZATION FORMATS
+------------------------------------------------------------
+
+String / JSON:
+  - Simple, human-readable, no schema enforcement
+  - Best for: development, simple pipelines
+
+Apache Avro:
+  - Binary format with schema registry
+  - Compact, fast, schema evolution support
+  - Best for: production pipelines with strong typing
+
+Protocol Buffers (Protobuf):
+  - Google's binary serialization format
+  - Very compact and fast, language-neutral
+
+Apache Parquet:
+  - Columnar format, best for analytics (rarely used in Kafka directly)
+
+Schema Registry (Confluent):
+  - Central repository for Avro/Protobuf/JSON schemas
+  - Ensures producers and consumers agree on schema
+  - Supports schema evolution (backward, forward, full compatibility)
+
+
+------------------------------------------------------------
+KAFKA USE CASES
+------------------------------------------------------------
+
+1. Real-Time Event Streaming
+   - User clicks, page views, searches → real-time analytics dashboard
+   - Fraud detection: analyze payment events as they happen
+
+2. Microservices Communication (Event-Driven Architecture)
+   - OrderPlaced event → inventory service, payment service, notification service
+   - Decouples services — no direct API calls between services
+
+3. Log Aggregation
+   - Collect logs from hundreds of servers into Kafka
+   - Forward to Elasticsearch, Splunk, or S3
+
+4. Change Data Capture (CDC)
+   - Debezium captures every database change (INSERT/UPDATE/DELETE)
+   - Streams changes to downstream systems in real-time
+
+5. Data Pipeline / ETL
+   - Source systems → Kafka → Stream processing → Data warehouse
+   - Real-time ETL replacing nightly batch jobs
+
+6. IoT Data Ingestion
+   - Millions of IoT sensors publish readings to Kafka
+   - Stream processing for anomaly detection, alerting
+
+7. Activity Tracking
+   - Track user behavior: views, clicks, purchases, searches
+   - Feed into recommendation engine and personalization
+
+
+------------------------------------------------------------
+KAFKA vs OTHER MESSAGING SYSTEMS
+------------------------------------------------------------
+
+Feature              | Kafka        | RabbitMQ      | AWS SQS       | AWS Kinesis
+---------------------|--------------|---------------|---------------|-------------
+Type                 | Event log    | Message queue | Message queue | Event stream
+Message retention    | Days/weeks   | Until consumed| 14 days max   | 7 days
+Multiple consumers   | Yes (groups) | No (one)      | No (one)      | Yes (shards)
+Replay messages      | Yes          | No            | No            | Yes
+Ordering             | Per partition| Per queue     | FIFO queue    | Per shard
+Throughput           | Millions/sec | 50K/sec       | Thousands/sec | Millions/sec
+Pull or Push         | Pull         | Push          | Pull          | Pull
+Managed cloud        | MSK (AWS)    | AmazonMQ      | Native AWS    | Native AWS
+Best for             | High-volume  | Task queues   | Simple queues | AWS-native
+                     | event streams| workflows     | decoupling    | streaming
+
+
+------------------------------------------------------------
+KAFKA CLUSTER ARCHITECTURE
+------------------------------------------------------------
+
+  ┌──────────────────────────────────────────────────────────┐
+  │                    KAFKA CLUSTER                         │
+  │                                                          │
+  │  ┌─────────────────────────────────────────────────┐    │
+  │  │              KRaft Controller Quorum            │    │
+  │  │  (Manages metadata, leader election, configs)   │    │
+  │  └─────────────────────────────────────────────────┘    │
+  │                          │                              │
+  │          ┌───────────────┼───────────────┐             │
+  │          │               │               │             │
+  │  ┌───────────┐   ┌───────────┐   ┌───────────┐        │
+  │  │  Broker 1 │   │  Broker 2 │   │  Broker 3 │        │
+  │  │           │   │           │   │           │        │
+  │  │ orders-P0 │   │ orders-P1 │   │ orders-P2 │        │
+  │  │ payments-P0   │ payments-P1   │ payments-P2        │
+  │  └───────────┘   └───────────┘   └───────────┘        │
+  │                                                         │
+  └──────────────────────────────────────────────────────────┘
+           ▲  ▲                              │  │
+           │  │                              │  │
+  ┌────────┘  └──────────┐      ┌───────────┘  └──────────┐
+  │                      │      │                          │
+  ┌──────────┐   ┌────────────┐ ┌──────────┐  ┌──────────────┐
+  │ Producer │   │  Producer  │ │ Consumer │  │ Consumer     │
+  │ (Orders  │   │ (Payments  │ │ Group A  │  │ Group B      │
+  │  Service)│   │  Service)  │ │          │  │              │
+  └──────────┘   └────────────┘ └──────────┘  └──────────────┘
+
+
+------------------------------------------------------------
+KAFKA IN DATA ENGINEERING PIPELINE
+------------------------------------------------------------
+
+  ┌──────────────────────────────────────────────────────────┐
+  │                    DATA SOURCES                          │
+  │  App Events │ Databases (CDC) │ IoT │ Logs │ APIs       │
+  └──────────────────────────┬───────────────────────────────┘
+                             │
+                             ▼
+  ┌──────────────────────────────────────────────────────────┐
+  │                  APACHE KAFKA                            │
+  │          (Real-time event streaming backbone)            │
+  └──────┬──────────────────────────────────────┬───────────┘
+         │                                      │
+         ▼                                      ▼
+  ┌─────────────────┐                  ┌──────────────────────┐
+  │  STREAM         │                  │  KAFKA CONNECT       │
+  │  PROCESSING     │                  │  (Sink Connectors)   │
+  │                 │                  │                      │
+  │  Kafka Streams  │                  │  → S3 / GCS          │
+  │  Apache Flink   │                  │  → Elasticsearch     │
+  │  Apache Spark   │                  │  → Snowflake         │
+  │  Structured     │                  │  → BigQuery          │
+  │  Streaming      │                  │  → PostgreSQL        │
+  └────────┬────────┘                  └──────────────────────┘
+           │
+           ▼
+  ┌─────────────────────────────────────────────────────────┐
+  │        DOWNSTREAM CONSUMERS                             │
+  │  Real-time dashboards │ ML models │ Alerts │ Data lake  │
+  └─────────────────────────────────────────────────────────┘
+
+
+------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------
+
+Apache Kafka is the backbone of modern real-time data architectures.
+
+Core Concepts:
+  ✔ Event       : Immutable record with key, value, timestamp, offset
+  ✔ Topic       : Named channel — append-only, partitioned, retained
+  ✔ Partition   : Ordered log segment — enables parallelism and scaling
+  ✔ Broker      : Kafka server — stores partitions, serves producers/consumers
+  ✔ Producer    : Writes events to topics (acks: 0/1/all)
+  ✔ Consumer    : Reads events from topics, tracks position via offsets
+  ✔ Consumer Group: Parallel consumers sharing topic partitions
+  ✔ Replication : Leader + followers for fault tolerance
+  ✔ Retention   : Messages kept for days/weeks, replayable
+  ✔ KRaft       : Built-in consensus replacing ZooKeeper (Kafka 3.3+)
+
+Ecosystem:
+  ✔ Kafka Streams  : In-process stream processing library
+  ✔ Kafka Connect  : Source/Sink connectors to external systems
+  ✔ Schema Registry: Central schema management for Avro/Protobuf
+
+Why Kafka wins:
+  - Handles millions of events per second
+  - Messages are durable, replayable, and retained
+  - Multiple consumers read the same data independently
+  - Decouples producers from consumers (event-driven architecture)
+  - Foundation of modern data pipelines, microservices, and real-time analytics

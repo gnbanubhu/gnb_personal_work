@@ -1,0 +1,670 @@
+APACHE KAFKA — FLOW DIAGRAMS
+==============================
+
+This document contains ASCII flow diagrams covering the end-to-end
+Kafka architecture, message flow, and key processing patterns.
+
+====================================================================
+DIAGRAM 1: HIGH-LEVEL KAFKA ARCHITECTURE
+====================================================================
+
+  ┌─────────────────────────────────────────────────────────────────┐
+  │                        PRODUCERS                                │
+  │                                                                 │
+  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐ │
+  │  │  Web App    │  │  Mobile App │  │  Database (CDC/Debezium) │ │
+  │  └──────┬──────┘  └──────┬──────┘  └────────────┬────────────┘ │
+  └─────────┼────────────────┼─────────────────────┼───────────────┘
+            │                │                     │
+            └────────────────┼─────────────────────┘
+                             │  publish events
+                             ▼
+  ┌─────────────────────────────────────────────────────────────────┐
+  │                    APACHE KAFKA CLUSTER                         │
+  │                                                                 │
+  │  ┌───────────────────────────────────────────────────────────┐  │
+  │  │               KRaft Controller Quorum                    │  │
+  │  │    (Cluster metadata, leader election, configurations)   │  │
+  │  └───────────────────────────────────────────────────────────┘  │
+  │                                                                 │
+  │  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐         │
+  │  │  Broker 1   │    │  Broker 2   │    │  Broker 3   │         │
+  │  │             │    │             │    │             │         │
+  │  │ orders-P0(L)│    │ orders-P1(L)│    │ orders-P2(L)│         │
+  │  │ orders-P1(R)│    │ orders-P2(R)│    │ orders-P0(R)│         │
+  │  │ orders-P2(R)│    │ orders-P0(R)│    │ orders-P1(R)│         │
+  │  └─────────────┘    └─────────────┘    └─────────────┘         │
+  │        L = Leader partition   R = Replica partition             │
+  └──────────────────────────────────┬──────────────────────────────┘
+                                     │  consume events
+                                     ▼
+  ┌─────────────────────────────────────────────────────────────────┐
+  │                        CONSUMERS                                │
+  │                                                                 │
+  │  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────┐  │
+  │  │  Consumer        │  │  Consumer        │  │  Consumer    │  │
+  │  │  Group A         │  │  Group B         │  │  Group C     │  │
+  │  │ (Order Processor)│  │ (Analytics Svc)  │  │ (Fraud Svc)  │  │
+  │  └──────────────────┘  └──────────────────┘  └──────────────┘  │
+  └─────────────────────────────────────────────────────────────────┘
+
+
+====================================================================
+DIAGRAM 2: PRODUCER MESSAGE FLOW (Step-by-Step)
+====================================================================
+
+  APPLICATION
+      │
+      │  1. Creates event/record
+      ▼
+  ┌─────────────────────────────────────┐
+  │         PRODUCER CLIENT             │
+  │                                     │
+  │  2. SERIALIZE                       │
+  │     Key   → StringSerializer        │
+  │     Value → JsonSerializer / Avro   │
+  └──────────────┬──────────────────────┘
+                 │
+                 ▼
+  ┌─────────────────────────────────────┐
+  │         PARTITIONER                 │
+  │                                     │
+  │  3. DECIDE PARTITION                │
+  │                                     │
+  │  Key provided?                      │
+  │    YES → hash(key) % num_partitions │
+  │    NO  → Round-robin / Sticky       │
+  └──────────────┬──────────────────────┘
+                 │
+                 ▼
+  ┌─────────────────────────────────────┐
+  │         RECORD ACCUMULATOR          │
+  │         (In-memory buffer)          │
+  │                                     │
+  │  4. BATCH messages per partition    │
+  │     Wait until:                     │
+  │       batch.size reached  OR        │
+  │       linger.ms elapsed             │
+  └──────────────┬──────────────────────┘
+                 │
+                 ▼
+  ┌─────────────────────────────────────┐
+  │         COMPRESSION (optional)      │
+  │  gzip / snappy / lz4 / zstd        │
+  └──────────────┬──────────────────────┘
+                 │
+                 ▼
+  ┌─────────────────────────────────────┐
+  │         SEND TO KAFKA BROKER        │
+  │         (Leader of partition)       │
+  │                                     │
+  │  5. ACKNOWLEDGMENT                  │
+  │                                     │
+  │  acks=0  → No wait (fastest)        │
+  │            May lose messages        │
+  │                                     │
+  │  acks=1  → Wait for Leader only     │
+  │            Moderate reliability     │
+  │                                     │
+  │  acks=all→ Wait for all ISR         │
+  │            Strongest guarantee      │
+  └──────────────┬──────────────────────┘
+                 │
+         ┌───────┴───────┐
+         │               │
+         ▼               ▼
+      SUCCESS          FAILURE
+         │               │
+         ▼               ▼
+  Record offset     Retry (up to
+  returned to       retries config)
+  application       └──► Dead Letter
+                         Queue (if
+                         retries exhausted)
+
+
+====================================================================
+DIAGRAM 3: TOPIC PARTITION & OFFSET FLOW
+====================================================================
+
+  TOPIC: "orders"  (3 partitions, replication factor = 3)
+
+  ┌─────────────────────────────────────────────────────────────────┐
+  │  PARTITION 0  (Leader: Broker 1)                                │
+  │                                                                 │
+  │  offset: │  0  │  1  │  2  │  3  │  4  │  5  │  6  │ ...     │
+  │  key:    │ u-1 │ u-3 │ u-1 │ u-3 │ u-1 │ u-3 │ u-1 │         │
+  │  value:  │{ord}│{ord}│{ord}│{ord}│{ord}│{ord}│{ord}│         │
+  │                                            ▲                   │
+  │                                       Consumer A               │
+  │                                       current offset = 4       │
+  └─────────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────────┐
+  │  PARTITION 1  (Leader: Broker 2)                                │
+  │                                                                 │
+  │  offset: │  0  │  1  │  2  │  3  │  4  │  5  │ ...            │
+  │  key:    │ u-2 │ u-4 │ u-2 │ u-4 │ u-2 │ u-4 │               │
+  │  value:  │{ord}│{ord}│{ord}│{ord}│{ord}│{ord}│               │
+  │                                       ▲                        │
+  │                                  Consumer B                    │
+  │                                  current offset = 4            │
+  └─────────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────────┐
+  │  PARTITION 2  (Leader: Broker 3)                                │
+  │                                                                 │
+  │  offset: │  0  │  1  │  2  │  3  │  4  │ ...                  │
+  │  key:    │ u-5 │ u-5 │ u-5 │ u-5 │ u-5 │                     │
+  │  value:  │{ord}│{ord}│{ord}│{ord}│{ord}│                     │
+  │                                  ▲                             │
+  │                             Consumer C                         │
+  │                             current offset = 3                 │
+  └─────────────────────────────────────────────────────────────────┘
+
+  Key: same key (e.g. u-1) ALWAYS goes to same partition
+       → guarantees ordering per user/entity
+
+
+====================================================================
+DIAGRAM 4: CONSUMER GROUP FLOW & PARTITION ASSIGNMENT
+====================================================================
+
+  SCENARIO: Topic "orders" has 6 partitions
+
+  ┌────────────────────────────────────────────────────────────────┐
+  │                TOPIC: orders (6 partitions)                    │
+  │   P0   P1   P2   P3   P4   P5                                 │
+  └────┬────┬────┬────┬────┬────┬───────────────────────────────┘
+       │    │    │    │    │    │
+       └────┴────┴────┴────┴────┴──────────────┐
+                                               │
+                                               ▼
+  ┌────────────────────────────────────────────────────────────────┐
+  │            CONSUMER GROUP: "order-processor"                   │
+  │                                                                │
+  │  Consumer 1         Consumer 2         Consumer 3             │
+  │  ┌──────────┐       ┌──────────┐       ┌──────────┐          │
+  │  │ reads    │       │ reads    │       │ reads    │          │
+  │  │ P0, P1   │       │ P2, P3   │       │ P4, P5   │          │
+  │  └──────────┘       └──────────┘       └──────────┘          │
+  └────────────────────────────────────────────────────────────────┘
+
+  ── Consumer fails (Consumer 2 goes down) → REBALANCE ──
+
+  ┌────────────────────────────────────────────────────────────────┐
+  │            CONSUMER GROUP: "order-processor"  (after rebalance)│
+  │                                                                │
+  │  Consumer 1              Consumer 3                           │
+  │  ┌──────────────┐        ┌──────────────┐                    │
+  │  │ reads        │        │ reads        │                    │
+  │  │ P0, P1, P2   │        │ P3, P4, P5   │                    │
+  │  └──────────────┘        └──────────────┘                    │
+  └────────────────────────────────────────────────────────────────┘
+
+  ── Multiple Consumer Groups read independently ──
+
+  P0..P5  ──────────────►  Group A: "order-processor"  (fulfillment)
+          ──────────────►  Group B: "analytics-service" (reporting)
+          ──────────────►  Group C: "fraud-detector"    (fraud check)
+
+  Each group maintains its own offsets — fully independent reads
+
+
+====================================================================
+DIAGRAM 5: REPLICATION FLOW (Fault Tolerance)
+====================================================================
+
+  Topic: "payments", Partition 0
+  Replication Factor = 3
+
+  ┌──────────────────────────────────────────────────────────────┐
+  │                      PRODUCER                                │
+  └──────────────────────────────┬───────────────────────────────┘
+                                 │  write
+                                 ▼
+  ┌──────────────────────────────────────────────────────────────┐
+  │  BROKER 1 — payments-P0 LEADER                               │
+  │  Receives write, appends to local log                        │
+  │                                                              │
+  │  [msg0][msg1][msg2][msg3][msg4]◄── new write                 │
+  └────────────────┬───────────────────────────────────────────┘
+                   │  replicate to followers
+       ┌───────────┴──────────┐
+       │                      │
+       ▼                      ▼
+  ┌──────────────┐     ┌──────────────┐
+  │  BROKER 2    │     │  BROKER 3    │
+  │  FOLLOWER    │     │  FOLLOWER    │
+  │  (ISR)       │     │  (ISR)       │
+  │              │     │              │
+  │ [msg0][msg1] │     │ [msg0][msg1] │
+  │ [msg2][msg3] │     │ [msg2][msg3] │
+  │ [msg4]       │     │ [msg4]       │
+  └──────────────┘     └──────────────┘
+
+  ── Broker 1 FAILS ──
+
+  ┌──────────────────────────────────────────────────────────────┐
+  │  KRaft Controller detects Leader failure                      │
+  │  Elects new Leader from ISR (e.g., Broker 2)                 │
+  └──────────────────────────────────────────────────────────────┘
+                                 │
+                                 ▼
+  ┌──────────────────────────────────────────────────────────────┐
+  │  BROKER 2 — payments-P0 NEW LEADER                           │
+  │  Producers and consumers automatically reconnect             │
+  │  No data loss (all messages were replicated)                 │
+  └──────────────────────────────────────────────────────────────┘
+
+
+====================================================================
+DIAGRAM 6: END-TO-END MESSAGE FLOW (Order Processing Example)
+====================================================================
+
+  ┌────────────────┐
+  │  ORDER SERVICE │  Customer places an order
+  │  (Producer)    │
+  └───────┬────────┘
+          │
+          │  Produces event to topic: "orders"
+          │  Key: "order-789"
+          │  Value: { order_id: 789, user_id: 123,
+          │           items: [...], total: $150 }
+          ▼
+  ┌─────────────────────────────────────────────────────────────┐
+  │               KAFKA TOPIC: "orders"                         │
+  │                                                             │
+  │  Partition 1  [... ][... ][order-789] ◄── appended         │
+  │                                offset=47                   │
+  └──────────┬──────────────────────────────────────────────────┘
+             │
+             │  Multiple consumers read simultaneously
+             │
+    ┌────────┴────────────────────────────────────┐
+    │                 │                           │
+    ▼                 ▼                           ▼
+  ┌───────────┐  ┌────────────────┐   ┌──────────────────────┐
+  │ INVENTORY │  │    PAYMENT     │   │   NOTIFICATION       │
+  │ SERVICE   │  │    SERVICE     │   │   SERVICE            │
+  │           │  │                │   │                      │
+  │ Reads     │  │ Reads order    │   │ Reads order          │
+  │ order     │  │ Captures       │   │ Sends confirmation   │
+  │ Reserves  │  │ payment        │   │ email / SMS          │
+  │ stock     │  │                │   │                      │
+  └─────┬─────┘  └───────┬────────┘   └──────────────────────┘
+        │                │
+        │ Publishes      │ Publishes
+        ▼                ▼
+  ┌──────────────┐  ┌──────────────┐
+  │ TOPIC:       │  │ TOPIC:       │
+  │ "inventory-  │  │ "payments"   │
+  │  updates"    │  │              │
+  └──────┬───────┘  └──────┬───────┘
+         │                 │
+         ▼                 ▼
+  ┌──────────────┐  ┌──────────────────────────┐
+  │ FULFILLMENT  │  │ FRAUD DETECTION SERVICE  │
+  │ SERVICE      │  │ Analyzes payment event   │
+  │              │  │ Flags if suspicious      │
+  │ Routes order │  └──────────────────────────┘
+  │ to warehouse │
+  └──────┬───────┘
+         │ Publishes
+         ▼
+  ┌──────────────┐
+  │ TOPIC:       │
+  │ "shipments"  │
+  └──────┬───────┘
+         │
+         ▼
+  ┌──────────────────────┐
+  │  SHIPPING SERVICE    │
+  │  Generates label     │
+  │  Dispatches courier  │
+  └──────────────────────┘
+
+
+====================================================================
+DIAGRAM 7: CONSUMER OFFSET COMMIT FLOW
+====================================================================
+
+  CONSUMER POLL LOOP
+
+  ┌────────────────────────────────────────────────────────────┐
+  │                                                            │
+  │   ┌─────────────────────────────────────────────────┐     │
+  │   │  POLL Kafka for new messages                    │     │
+  │   │  (max.poll.records = 500)                       │     │
+  │   └────────────────────┬────────────────────────────┘     │
+  │                        │                                   │
+  │                        ▼                                   │
+  │   ┌─────────────────────────────────────────────────┐     │
+  │   │  DESERIALIZE messages                           │     │
+  │   │  (JSON / Avro / Protobuf)                       │     │
+  │   └────────────────────┬────────────────────────────┘     │
+  │                        │                                   │
+  │                        ▼                                   │
+  │   ┌─────────────────────────────────────────────────┐     │
+  │   │  PROCESS each message                           │     │
+  │   │  (business logic: save to DB, call API, etc.)   │     │
+  │   └────────────────────┬────────────────────────────┘     │
+  │                        │                                   │
+  │              ┌─────────┴────────┐                         │
+  │              │                  │                         │
+  │           SUCCESS            FAILURE                      │
+  │              │                  │                         │
+  │              ▼                  ▼                         │
+  │   ┌───────────────────┐  ┌─────────────────────────┐     │
+  │   │  COMMIT OFFSET    │  │  DO NOT commit offset   │     │
+  │   │                   │  │  Retry or send to       │     │
+  │   │  Auto commit:     │  │  Dead Letter Topic      │     │
+  │   │  every 5 seconds  │  └─────────────────────────┘     │
+  │   │                   │                                   │
+  │   │  Manual commit:   │                                   │
+  │   │  after processing │                                   │
+  │   └────────┬──────────┘                                   │
+  │            │                                              │
+  │            └──────────────────────────────────────────┐  │
+  │                                          LOOP AGAIN   │  │
+  │   ◄──────────────────────────────────────────────────┘  │
+  └────────────────────────────────────────────────────────────┘
+
+  Offset Storage:
+  ┌────────────────────────────────────────────┐
+  │  Internal Kafka Topic: __consumer_offsets  │
+  │                                            │
+  │  group_id | topic   | partition | offset   │
+  │  ---------|---------|-----------|-------   │
+  │  grp-A    | orders  |     0     |   47     │
+  │  grp-A    | orders  |     1     |   83     │
+  │  grp-A    | orders  |     2     |   61     │
+  └────────────────────────────────────────────┘
+
+
+====================================================================
+DIAGRAM 8: KAFKA CONNECT FLOW (Source & Sink)
+====================================================================
+
+  ── SOURCE CONNECTOR: Database → Kafka ──
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │  SOURCE SYSTEM                                              │
+  │  MySQL / PostgreSQL / MongoDB                               │
+  │                                                             │
+  │  INSERT, UPDATE, DELETE operations happening               │
+  └──────────────────────┬──────────────────────────────────────┘
+                         │
+                         ▼
+  ┌─────────────────────────────────────────────────────────────┐
+  │  KAFKA CONNECT — SOURCE CONNECTOR                           │
+  │  (Debezium CDC Connector)                                   │
+  │                                                             │
+  │  1. Reads database transaction log (binlog / WAL)          │
+  │  2. Converts each change to a Kafka event                  │
+  │  3. Tracks position (LSN / binlog offset) for resumability │
+  └──────────────────────┬──────────────────────────────────────┘
+                         │  publishes events
+                         ▼
+  ┌─────────────────────────────────────────────────────────────┐
+  │              KAFKA TOPIC                                    │
+  │  "db.schema.orders"                                         │
+  │                                                             │
+  │  { op: "c", after: { id:1, status:"placed" } }  ← INSERT  │
+  │  { op: "u", after: { id:1, status:"shipped" } } ← UPDATE  │
+  │  { op: "d", before:{ id:1, status:"shipped" } } ← DELETE  │
+  └─────────────────────────────────────────────────────────────┘
+                         │
+                         ▼
+  ── SINK CONNECTOR: Kafka → Downstream Systems ──
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │  KAFKA CONNECT — SINK CONNECTORS                            │
+  │                                                             │
+  │  ┌─────────────────────────────────────────────────────┐   │
+  │  │  S3 Sink         → s3://data-lake/orders/           │   │
+  │  │  Elasticsearch   → orders index (search)            │   │
+  │  │  BigQuery Sink   → dataset.orders (analytics)       │   │
+  │  │  Snowflake Sink  → ORDERS table (warehouse)         │   │
+  │  │  JDBC Sink       → PostgreSQL replica               │   │
+  │  └─────────────────────────────────────────────────────┘   │
+  └─────────────────────────────────────────────────────────────┘
+
+
+====================================================================
+DIAGRAM 9: KAFKA STREAMS PROCESSING FLOW
+====================================================================
+
+  INPUT TOPIC: "raw-clicks"
+  (user page view events)
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │  { user_id: "u1", page: "/product/123", ts: 1700000000 }   │
+  │  { user_id: "u2", page: "/home",        ts: 1700000001 }   │
+  │  { user_id: "u1", page: "/product/456", ts: 1700000002 }   │
+  │  { user_id: "u3", page: "/product/123", ts: 1700000003 }   │
+  └──────────────────────────┬──────────────────────────────────┘
+                             │
+                             ▼
+  ┌─────────────────────────────────────────────────────────────┐
+  │              KAFKA STREAMS TOPOLOGY                         │
+  │                                                             │
+  │  STEP 1: FILTER                                            │
+  │  ─────────────────────────────────────────────────────     │
+  │  Keep only product page views                              │
+  │  page.startsWith("/product/") → YES | NO → discard         │
+  │                                                             │
+  │  STEP 2: MAP                                               │
+  │  ─────────────────────────────────────────────────────     │
+  │  Extract product_id from page URL                          │
+  │  "/product/123" → product_id = "123"                       │
+  │  Key = product_id, Value = 1 (count)                       │
+  │                                                             │
+  │  STEP 3: GROUP BY KEY                                      │
+  │  ─────────────────────────────────────────────────────     │
+  │  Group events by product_id                                │
+  │  product-123: [1, 1, 1]                                    │
+  │  product-456: [1]                                          │
+  │                                                             │
+  │  STEP 4: WINDOWED AGGREGATE (5-minute tumbling window)     │
+  │  ─────────────────────────────────────────────────────     │
+  │  Count views per product in each 5-minute window           │
+  │  Window [10:00-10:05]: product-123 = 3, product-456 = 1   │
+  └──────────────────────────┬──────────────────────────────────┘
+                             │
+                             ▼
+  OUTPUT TOPIC: "product-view-counts"
+  ┌─────────────────────────────────────────────────────────────┐
+  │  { product_id: "123", views: 3, window: "10:00-10:05" }    │
+  │  { product_id: "456", views: 1, window: "10:00-10:05" }    │
+  └─────────────────────────────────────────────────────────────┘
+                             │
+                             ▼
+  ┌─────────────────────────────────────────────────────────────┐
+  │  REAL-TIME DASHBOARD                                        │
+  │  "Trending Products Right Now"                             │
+  └─────────────────────────────────────────────────────────────┘
+
+
+====================================================================
+DIAGRAM 10: DELIVERY SEMANTICS FLOW
+====================================================================
+
+  ── AT-MOST-ONCE (may lose messages) ──
+
+  Producer ──► Kafka ──► Consumer reads
+                         Consumer commits offset BEFORE processing
+                             │
+                         Consumer crashes
+                             │
+                         Message LOST (offset already committed)
+
+  ── AT-LEAST-ONCE (may duplicate — most common) ──
+
+  Producer ──► Kafka ──► Consumer reads
+                         Consumer processes message
+                         Consumer commits offset AFTER processing
+                             │
+                         Consumer crashes BEFORE commit
+                             │
+                         Consumer restarts → reads SAME message again
+                         Message DUPLICATED → consumer must be idempotent
+
+  ── EXACTLY-ONCE (no loss, no duplicate) ──
+
+  Producer                         Kafka
+  ┌──────────────────┐            ┌──────────────────────────┐
+  │ idempotent=true  │            │                          │
+  │ producer_id=42   │            │ Detects duplicate by     │
+  │ sequence_num=10  │──────────► │ producer_id + seq_num    │
+  │                  │            │ Deduplicates automatically│
+  └──────────────────┘            └──────────────────────────┘
+
+  Consumer + Producer (Kafka Streams):
+  ┌─────────────────────────────────────────────────────────┐
+  │  BEGIN TRANSACTION                                      │
+  │    Read from input topic (offset 47)                   │
+  │    Process message                                      │
+  │    Write result to output topic                        │
+  │    Commit input offset atomically with output write    │
+  │  COMMIT TRANSACTION                                     │
+  │                                                         │
+  │  → Either ALL happens or NONE happens                  │
+  └─────────────────────────────────────────────────────────┘
+
+
+====================================================================
+DIAGRAM 11: KAFKA IN DATA ENGINEERING PIPELINE
+====================================================================
+
+  ┌──────────────────────────────────────────────────────────────┐
+  │                    DATA SOURCES                              │
+  │                                                              │
+  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌────────────┐  │
+  │  │  Web /   │  │ Database │  │   IoT    │  │ Third-party│  │
+  │  │  Mobile  │  │  (CDC)   │  │  Sensors │  │    APIs    │  │
+  │  │  Events  │  │          │  │          │  │            │  │
+  │  └────┬─────┘  └────┬─────┘  └────┬─────┘  └─────┬──────┘  │
+  └───────┼─────────────┼─────────────┼───────────────┼─────────┘
+          │             │             │               │
+          └─────────────┴─────────────┴───────────────┘
+                                  │
+                    publish events (real-time)
+                                  │
+                                  ▼
+  ┌──────────────────────────────────────────────────────────────┐
+  │                    APACHE KAFKA                              │
+  │                                                              │
+  │   Topics: user-events │ db-changes │ sensor-data │ logs     │
+  └────────────────────────────────┬─────────────────────────────┘
+                                   │
+          ┌─────────────────────────┼──────────────────────┐
+          │                         │                      │
+          ▼                         ▼                      ▼
+  ┌───────────────┐       ┌──────────────────┐   ┌─────────────────┐
+  │  STREAM       │       │  KAFKA CONNECT   │   │  CONSUMERS      │
+  │  PROCESSING   │       │  SINK CONNECTORS │   │  (Microservices)│
+  │               │       │                  │   │                 │
+  │  Apache Flink │       │  → S3 / GCS      │   │  Order Service  │
+  │  Spark Struct.│       │  → BigQuery      │   │  Fraud Service  │
+  │  Streaming    │       │  → Snowflake     │   │  Notif. Service │
+  │  Kafka Streams│       │  → Elasticsearch │   │                 │
+  └───────┬───────┘       └──────────────────┘   └─────────────────┘
+          │
+          ▼
+  ┌───────────────────────────────────────────────────────────────┐
+  │                    OUTPUT TOPICS                              │
+  │   enriched-events │ aggregations │ alerts │ anomalies         │
+  └──────────────────────────────────────────────────────────────┘
+          │
+          ▼
+  ┌───────────────────────────────────────────────────────────────┐
+  │              DOWNSTREAM CONSUMERS                             │
+  │                                                               │
+  │  ┌─────────────┐  ┌───────────────┐  ┌─────────────────────┐ │
+  │  │  Real-time  │  │  ML Model     │  │   Alerting /        │ │
+  │  │  Dashboard  │  │  (Retraining  │  │   PagerDuty /       │ │
+  │  │  (Grafana / │  │  / Inference) │  │   Slack             │ │
+  │  │   Kibana)   │  │               │  │                     │ │
+  │  └─────────────┘  └───────────────┘  └─────────────────────┘ │
+  └───────────────────────────────────────────────────────────────┘
+
+
+====================================================================
+DIAGRAM 12: LOG COMPACTION FLOW
+====================================================================
+
+  COMPACTED TOPIC: "inventory-state"
+  (Keep only LATEST record per key)
+
+  BEFORE COMPACTION:
+  ┌────────────────────────────────────────────────────────────┐
+  │  offset │  key    │  value                                 │
+  │  ──────────────────────────────────────────────────────    │
+  │    0    │ sku-001 │ { stock: 100 }                        │
+  │    1    │ sku-002 │ { stock: 50  }                        │
+  │    2    │ sku-001 │ { stock: 95  }  ← updated             │
+  │    3    │ sku-003 │ { stock: 200 }                        │
+  │    4    │ sku-002 │ { stock: 45  }  ← updated             │
+  │    5    │ sku-001 │ { stock: 90  }  ← updated             │
+  │    6    │ sku-002 │ null            ← deleted (tombstone) │
+  └────────────────────────────────────────────────────────────┘
+                             │
+                   Log Compaction runs
+                             │
+                             ▼
+  AFTER COMPACTION:
+  ┌────────────────────────────────────────────────────────────┐
+  │  offset │  key    │  value                                 │
+  │  ──────────────────────────────────────────────────────    │
+  │    5    │ sku-001 │ { stock: 90  }  ← latest kept         │
+  │    3    │ sku-003 │ { stock: 200 }  ← only record, kept   │
+  │         │ sku-002 │  (removed — tombstone purged)          │
+  └────────────────────────────────────────────────────────────┘
+
+  Use cases for compacted topics:
+    - Database-like snapshots (latest state per key)
+    - User profile store
+    - Inventory state
+    - Configuration store
+
+
+====================================================================
+SUMMARY OF ALL DIAGRAMS
+====================================================================
+
+  Diagram  1 : High-Level Kafka Architecture
+               Producers → Kafka Cluster (brokers + KRaft) → Consumer Groups
+
+  Diagram  2 : Producer Message Flow
+               Create → Serialize → Partition → Batch → Compress → Send → ACK
+
+  Diagram  3 : Topic Partition & Offset Flow
+               Partitions with offsets, same key → same partition
+
+  Diagram  4 : Consumer Group & Partition Assignment
+               Balanced assignment, rebalance on failure, independent groups
+
+  Diagram  5 : Replication Flow
+               Leader + ISR followers, automatic leader election on failure
+
+  Diagram  6 : End-to-End Order Processing Flow
+               Order placed → Kafka → Inventory, Payment, Notification, Fraud
+
+  Diagram  7 : Consumer Offset Commit Flow
+               Poll → Deserialize → Process → Commit (auto or manual)
+
+  Diagram  8 : Kafka Connect Flow
+               Source: DB → Kafka (CDC), Sink: Kafka → S3/BigQuery/Elastic
+
+  Diagram  9 : Kafka Streams Processing
+               Filter → Map → GroupBy → Window → Aggregate → Output topic
+
+  Diagram 10 : Delivery Semantics
+               At-most-once, At-least-once, Exactly-once with transactions
+
+  Diagram 11 : Kafka in Data Engineering Pipeline
+               Sources → Kafka → Stream Processing / Connect → Dashboards / ML
+
+  Diagram 12 : Log Compaction Flow
+               Retain only latest record per key, tombstone for deletes

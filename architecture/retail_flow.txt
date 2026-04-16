@@ -1,0 +1,784 @@
+RETAIL ARCHITECTURE — FLOW DIAGRAMS
+=====================================
+
+This document contains ASCII flow diagrams covering the end-to-end
+retail architecture across all major domains and user journeys.
+
+====================================================================
+DIAGRAM 1: HIGH-LEVEL RETAIL SYSTEM OVERVIEW
+====================================================================
+
+  ┌──────────────────────────────────────────────────────────────┐
+  │                     CUSTOMER CHANNELS                        │
+  │                                                              │
+  │   ┌─────────┐       ┌─────────┐       ┌──────────────────┐  │
+  │   │  Web    │       │ Mobile  │       │ In-Store (POS /  │  │
+  │   │  App    │       │  App    │       │ Kiosk / Digital  │  │
+  │   │(Next.js)│       │(Flutter)│       │    Signage)      │  │
+  │   └────┬────┘       └────┬────┘       └────────┬─────────┘  │
+  └────────┼────────────────┼────────────────────┼──────────────┘
+           │                │                    │
+           └────────────────┼────────────────────┘
+                            │
+                            ▼
+  ┌─────────────────────────────────────────────────────────────┐
+  │               CDN + EDGE LAYER (CloudFront / Cloud CDN)     │
+  │         Static assets, cached pages, SSL termination        │
+  └──────────────────────────┬──────────────────────────────────┘
+                             │
+                             ▼
+  ┌─────────────────────────────────────────────────────────────┐
+  │                  API GATEWAY + AUTH LAYER                   │
+  │       OAuth 2.0 / JWT │ Rate Limiting │ Routing │ WAF       │
+  └──────────────────────────┬──────────────────────────────────┘
+                             │
+           ┌─────────────────┼──────────────────┐
+           │                 │                  │
+           ▼                 ▼                  ▼
+  ┌────────────────┐ ┌───────────────┐ ┌─────────────────┐
+  │   COMMERCE     │ │    ORDER      │ │    CUSTOMER     │
+  │   SERVICES     │ │  MANAGEMENT  │ │   SERVICES      │
+  │                │ │   SYSTEM     │ │                 │
+  │ • Product      │ │              │ │ • Profiles      │
+  │   Catalog      │ │ • Order CRUD │ │ • Loyalty       │
+  │ • Search       │ │ • Fulfillment│ │ • Segmentation  │
+  │ • Pricing      │ │ • Shipping   │ │ • Notifications │
+  │ • Cart         │ │ • Returns    │ │                 │
+  │ • Checkout     │ │              │ │                 │
+  └───────┬────────┘ └──────┬────────┘ └────────┬────────┘
+          │                 │                   │
+          └─────────────────┼───────────────────┘
+                            │
+                            ▼
+  ┌─────────────────────────────────────────────────────────────┐
+  │               EVENT BUS (Apache Kafka / AWS SQS+SNS)        │
+  │                                                             │
+  │  Topics: order.placed │ payment.completed │ stock.updated   │
+  │          shipment.dispatched │ return.initiated │ etc.      │
+  └─────┬─────────────┬──────────────┬─────────────────┬───────┘
+        │             │              │                 │
+        ▼             ▼              ▼                 ▼
+  ┌──────────┐ ┌───────────┐ ┌───────────┐ ┌──────────────────┐
+  │ PAYMENT  │ │INVENTORY  │ │  SUPPLY   │ │  DATA &          │
+  │ SERVICE  │ │ SERVICE   │ │  CHAIN    │ │  ANALYTICS       │
+  │          │ │           │ │           │ │                  │
+  │• Gateway │ │• Stock    │ │• Vendor   │ │• Data Lakehouse  │
+  │• Fraud   │ │• Warehouse│ │• Purchase │ │• BigQuery /      │
+  │• Refunds │ │• Reorder  │ │  Orders   │ │  Redshift        │
+  │• PCI DSS │ │• Forecast │ │• Logistics│ │• BI Dashboards   │
+  └──────────┘ └───────────┘ └───────────┘ └──────────────────┘
+
+
+====================================================================
+DIAGRAM 2: CUSTOMER PURCHASE JOURNEY (HAPPY PATH)
+====================================================================
+
+  CUSTOMER
+     │
+     │  Opens web / mobile app
+     ▼
+  ┌─────────────────────────────────────┐
+  │         HOME PAGE / LANDING         │
+  │  Personalized recommendations       │
+  │  Trending products, promotions      │
+  └───────────────┬─────────────────────┘
+                  │  Browses / Searches
+                  ▼
+  ┌─────────────────────────────────────┐
+  │         PRODUCT SEARCH              │
+  │  Elasticsearch / Algolia            │
+  │  Faceted filters, auto-suggest      │
+  │  Personalized ranking               │
+  └───────────────┬─────────────────────┘
+                  │  Clicks product
+                  ▼
+  ┌─────────────────────────────────────┐
+  │         PRODUCT DETAIL PAGE (PDP)   │
+  │  Images, description, price         │
+  │  Stock availability (real-time)     │
+  │  Related / similar products         │
+  │  Reviews and ratings                │
+  └───────────────┬─────────────────────┘
+                  │  Clicks "Add to Cart"
+                  ▼
+  ┌─────────────────────────────────────┐
+  │         CART SERVICE                │
+  │  Add item to cart (Redis)           │
+  │  Validate: price + stock            │
+  │  Apply promotions / coupon codes    │
+  │  Show cart summary                  │
+  └───────────────┬─────────────────────┘
+                  │  Clicks "Proceed to Checkout"
+                  ▼
+  ┌─────────────────────────────────────┐
+  │         CHECKOUT SERVICE            │
+  │  Delivery address entry             │
+  │  Shipping method selection          │
+  │  Tax calculation (by geography)     │
+  │  Order summary + final price        │
+  └───────────────┬─────────────────────┘
+                  │  Clicks "Place Order"
+                  ▼
+  ┌─────────────────────────────────────┐
+  │         PAYMENT SERVICE             │
+  │  Tokenize card / wallet             │
+  │  Fraud score check                  │
+  │  ─────────────────────────          │
+  │  FRAUD OK?                          │
+  │    YES → Send to payment gateway    │
+  │    NO  → Decline / Manual review    │
+  │  ─────────────────────────          │
+  │  PAYMENT AUTHORIZED?                │
+  │    YES → Continue                   │
+  │    NO  → Retry / Notify customer    │
+  └───────────────┬─────────────────────┘
+                  │  Payment Captured
+                  ▼
+  ┌─────────────────────────────────────┐
+  │         ORDER MANAGEMENT (OMS)      │
+  │  Create order record                │
+  │  Publish: order.placed event        │
+  │  Send order confirmation email/SMS  │
+  └───────────────┬─────────────────────┘
+                  │  Event consumed
+                  ▼
+  ┌─────────────────────────────────────┐
+  │         INVENTORY SERVICE           │
+  │  Decrement stock for each item      │
+  │  Reserve inventory                  │
+  │  Publish: stock.updated event       │
+  └───────────────┬─────────────────────┘
+                  │
+                  ▼
+  ┌─────────────────────────────────────┐
+  │         FULFILLMENT SERVICE         │
+  │  Route order to optimal warehouse   │
+  │  (closest, fastest, cheapest)       │
+  │  Send pick list to WMS              │
+  └───────────────┬─────────────────────┘
+                  │
+                  ▼
+  ┌─────────────────────────────────────┐
+  │  WAREHOUSE MANAGEMENT SYSTEM (WMS)  │
+  │  Pick items from shelves            │
+  │  Pack items                         │
+  │  Generate shipping label            │
+  └───────────────┬─────────────────────┘
+                  │
+                  ▼
+  ┌─────────────────────────────────────┐
+  │         SHIPPING SERVICE            │
+  │  Hand off to carrier (FedEx/UPS)    │
+  │  Publish: shipment.dispatched event │
+  │  Send shipping confirmation + link  │
+  └───────────────┬─────────────────────┘
+                  │
+                  ▼
+  ┌─────────────────────────────────────┐
+  │         DELIVERY                    │
+  │  Carrier delivers to customer       │
+  │  Publish: order.delivered event     │
+  │  Trigger: loyalty points awarded    │
+  │  Trigger: review request email      │
+  └─────────────────────────────────────┘
+
+  CUSTOMER receives order ✓
+
+
+====================================================================
+DIAGRAM 3: INVENTORY MANAGEMENT FLOW
+====================================================================
+
+  CUSTOMER PLACES ORDER
+          │
+          ▼
+  ┌────────────────────────┐
+  │   ORDER SERVICE        │
+  │  Publishes             │
+  │  order.placed event    │
+  └──────────┬─────────────┘
+             │
+             ▼
+  ┌────────────────────────┐       ┌──────────────────────────┐
+  │  INVENTORY SERVICE     │       │    INVENTORY DATABASE    │
+  │                        │◄─────►│  (PostgreSQL / DynamoDB) │
+  │  1. Check availability │       │  SKU | Location | Stock  │
+  │  2. Reserve inventory  │       │  sku-001 | WH-1 |  50   │
+  │  3. Decrement stock    │       │  sku-001 | WH-2 |  30   │
+  └──────────┬─────────────┘       └──────────────────────────┘
+             │
+      ┌──────┴───────┐
+      │              │
+      ▼              ▼
+  STOCK OK?     STOCK LOW?
+      │              │
+      │              ▼
+      │     ┌─────────────────────┐
+      │     │  REPLENISHMENT      │
+      │     │  TRIGGER            │
+      │     │                     │
+      │     │ Stock < Reorder Pt? │
+      │     │   YES → Create PO   │
+      │     │   NO  → Monitor     │
+      │     └────────┬────────────┘
+      │              │
+      │              ▼
+      │     ┌─────────────────────┐
+      │     │  VENDOR / SUPPLIER  │
+      │     │  Purchase Order     │
+      │     │  sent via EDI/API   │
+      │     └────────┬────────────┘
+      │              │
+      │              ▼
+      │     ┌─────────────────────┐
+      │     │  GOODS RECEIVED     │
+      │     │  at Warehouse       │
+      │     │  Stock replenished  │
+      │     └─────────────────────┘
+      │
+      ▼
+  ┌────────────────────────┐
+  │  PUBLISH EVENT         │
+  │  stock.updated         │
+  │  → Product page shows  │
+  │    latest availability │
+  └────────────────────────┘
+
+
+====================================================================
+DIAGRAM 4: PAYMENT PROCESSING FLOW
+====================================================================
+
+  CUSTOMER submits payment
+          │
+          ▼
+  ┌────────────────────────────────────────┐
+  │         CHECKOUT SERVICE               │
+  │  Collects: card / wallet / BNPL        │
+  │  Tokenizes card (never store raw PAN)  │
+  └──────────────┬─────────────────────────┘
+                 │
+                 ▼
+  ┌────────────────────────────────────────┐
+  │         FRAUD DETECTION ENGINE         │
+  │  Inputs: IP, device, velocity,         │
+  │          order amount, location        │
+  │  ML model scores transaction           │
+  │                                        │
+  │  Score > Threshold? ─── YES ──►  BLOCK │
+  │       │                        or REVIEW
+  │       NO                               │
+  └───────┬────────────────────────────────┘
+          │  Low risk — proceed
+          ▼
+  ┌────────────────────────────────────────┐
+  │       PAYMENT GATEWAY                  │
+  │  (Stripe / Adyen / Braintree)          │
+  │                                        │
+  │  Send payment token to gateway         │
+  │  Gateway contacts card network         │
+  │  (Visa / Mastercard / Amex)            │
+  └───────┬────────────────────────────────┘
+          │
+          ▼
+  ┌────────────────────────────────────────┐
+  │       CARD NETWORK → ISSUING BANK      │
+  │                                        │
+  │  Check: card valid, funds available,   │
+  │         fraud signals                  │
+  │                                        │
+  │  3DS2 Challenge required?              │
+  │    YES → Customer completes OTP / biom │
+  │    NO  → Silent authentication         │
+  └───────┬────────────────────────────────┘
+          │
+   ┌──────┴──────────┐
+   │                 │
+   ▼                 ▼
+APPROVED          DECLINED
+   │                 │
+   ▼                 ▼
+┌──────────┐   ┌────────────────────────┐
+│ Capture  │   │  Notify customer       │
+│ payment  │   │  Suggest retry or      │
+│          │   │  alternative payment   │
+└────┬─────┘   └────────────────────────┘
+     │
+     ▼
+  ┌────────────────────────────────────────┐
+  │       ORDER SERVICE                    │
+  │  Mark order as payment_captured        │
+  │  Publish: payment.completed event      │
+  │  Trigger fulfillment flow              │
+  └────────────────────────────────────────┘
+
+
+====================================================================
+DIAGRAM 5: RETURNS & REFUND FLOW
+====================================================================
+
+  CUSTOMER requests return
+          │
+          ▼
+  ┌─────────────────────────────────┐
+  │  RETURNS SERVICE                │
+  │  Customer selects items         │
+  │  Selects return reason          │
+  │  Chooses return method:         │
+  │    • Ship back                  │
+  │    • Drop at store              │
+  │    • Doorstep pickup            │
+  └──────────────┬──────────────────┘
+                 │
+                 ▼
+  ┌─────────────────────────────────┐
+  │  RMA GENERATION                 │
+  │  (Return Merchandise Auth)      │
+  │  Generate return label          │
+  │  Email return instructions      │
+  └──────────────┬──────────────────┘
+                 │
+                 ▼
+  ┌─────────────────────────────────┐
+  │  ITEM RETURNED TO WAREHOUSE     │
+  │  Carrier scans package          │
+  │  WMS receives return            │
+  └──────────────┬──────────────────┘
+                 │
+                 ▼
+  ┌─────────────────────────────────┐
+  │  QUALITY INSPECTION             │
+  │                                 │
+  │  Item condition check:          │
+  │  ┌───────────────────────────┐  │
+  │  │ GOOD → Restock inventory  │  │
+  │  │ DAMAGED → Write off /     │  │
+  │  │           Vendor claim    │  │
+  │  │ REFURBISH → Outlet / B2B  │  │
+  │  └───────────────────────────┘  │
+  └──────────────┬──────────────────┘
+                 │
+                 ▼
+  ┌─────────────────────────────────┐
+  │  REFUND SERVICE                 │
+  │  Trigger refund to original     │
+  │  payment method                 │
+  │                                 │
+  │  Options:                       │
+  │  • Original payment method      │
+  │  • Store credit / gift card     │
+  │  • Exchange order creation      │
+  └──────────────┬──────────────────┘
+                 │
+                 ▼
+  ┌─────────────────────────────────┐
+  │  PAYMENT GATEWAY                │
+  │  Process refund                 │
+  │  Notify customer via email/SMS  │
+  │  Refund appears in 3-5 days     │
+  └─────────────────────────────────┘
+
+
+====================================================================
+DIAGRAM 6: PERSONALIZATION & RECOMMENDATION FLOW
+====================================================================
+
+  USER BEHAVIOUR (continuous)
+  │
+  ├── Page views
+  ├── Search queries
+  ├── Product clicks
+  ├── Add to cart
+  ├── Purchases
+  └── Returns / Reviews
+          │
+          ▼
+  ┌─────────────────────────────────┐
+  │  CLICKSTREAM PIPELINE           │
+  │  Kafka / Pub/Sub                │
+  │  → Real-time event stream       │
+  └───────────┬─────────────────────┘
+              │
+     ┌────────┴───────────┐
+     │                    │
+     ▼                    ▼
+  ┌──────────────┐  ┌──────────────────────┐
+  │  REAL-TIME   │  │   BATCH PIPELINE     │
+  │  FEATURE     │  │   (Daily/Hourly)     │
+  │  STORE       │  │                      │
+  │  (Redis)     │  │   Historical events  │
+  │              │  │   → Feature compute  │
+  │  user_id:    │  │   → Model training   │
+  │  last_viewed │  │     (SageMaker /     │
+  │  last_search │  │      Vertex AI)      │
+  │  categories  │  └──────────┬───────────┘
+  └──────┬───────┘             │
+         │                     │
+         └──────────┬──────────┘
+                    │
+                    ▼
+  ┌─────────────────────────────────┐
+  │  RECOMMENDATION MODEL           │
+  │                                 │
+  │  • Collaborative Filtering      │
+  │    (users like you bought...)   │
+  │  • Content-Based Filtering      │
+  │    (similar attributes)         │
+  │  • Deep Learning Model          │
+  │    (two-tower / transformer)    │
+  └───────────────┬─────────────────┘
+                  │  Model inference (<50ms)
+                  ▼
+  ┌─────────────────────────────────┐
+  │  RECOMMENDATION API             │
+  │  Returns: top-N product IDs     │
+  │  Served on:                     │
+  │  • Home page                    │
+  │  • Product detail page          │
+  │  • Cart page ("you may also..") │
+  │  • Email campaigns              │
+  │  • Post-purchase page           │
+  └─────────────────────────────────┘
+
+
+====================================================================
+DIAGRAM 7: DATA & ANALYTICS PIPELINE FLOW
+====================================================================
+
+  ┌───────────────────────────────────────────────────────────┐
+  │                     DATA SOURCES                          │
+  │                                                           │
+  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌───────────────┐  │
+  │  │   OMS   │ │  POS /  │ │  Web /  │ │  ERP / CRM /  │  │
+  │  │ Orders  │ │ In-Store│ │ Mobile  │ │  Ad Platforms │  │
+  │  │         │ │  Sales  │ │Clickstr.│ │               │  │
+  │  └────┬────┘ └────┬────┘ └────┬────┘ └───────┬───────┘  │
+  └───────┼───────────┼───────────┼───────────────┼──────────┘
+          │           │           │               │
+          └───────────┴───────────┴───────────────┘
+                                  │
+                                  ▼
+  ┌───────────────────────────────────────────────────────────┐
+  │                  INGESTION LAYER                          │
+  │                                                           │
+  │   Real-Time: Kafka / Pub/Sub / Kinesis                    │
+  │   Batch:     Airbyte / Fivetran / Custom ETL              │
+  └───────────────────────────────┬───────────────────────────┘
+                                  │
+                                  ▼
+  ┌───────────────────────────────────────────────────────────┐
+  │              DATA LAKEHOUSE (Medallion Architecture)      │
+  │                                                           │
+  │  ┌────────────────────────────────────────────────────┐  │
+  │  │  BRONZE LAYER (Raw Zone)                           │  │
+  │  │  Exact copy of source data, immutable              │  │
+  │  │  Format: JSON / CSV / Avro / Parquet               │  │
+  │  │  Storage: S3 / GCS / ADLS                         │  │
+  │  └───────────────────────┬────────────────────────────┘  │
+  │                          │  (dbt / Spark transforms)      │
+  │                          ▼                                │
+  │  ┌────────────────────────────────────────────────────┐  │
+  │  │  SILVER LAYER (Cleaned / Conformed)                │  │
+  │  │  Deduped, validated, standardized                  │  │
+  │  │  Joined across domains (orders + customers)        │  │
+  │  │  Format: Delta Lake / Apache Iceberg               │  │
+  │  └───────────────────────┬────────────────────────────┘  │
+  │                          │  (aggregations)                │
+  │                          ▼                                │
+  │  ┌────────────────────────────────────────────────────┐  │
+  │  │  GOLD LAYER (Business / Serving Layer)             │  │
+  │  │  Aggregated, BI-ready tables                       │  │
+  │  │  daily_sales │ customer_ltv │ product_performance  │  │
+  │  │  inventory_health │ funnel_metrics                 │  │
+  │  └───────────────────────┬────────────────────────────┘  │
+  └──────────────────────────┼────────────────────────────────┘
+                             │
+              ┌──────────────┼──────────────┐
+              │              │              │
+              ▼              ▼              ▼
+  ┌───────────────┐ ┌───────────────┐ ┌────────────────┐
+  │  DATA         │ │  BI / REPORTS │ │  ML / AI       │
+  │  WAREHOUSE    │ │               │ │  TRAINING      │
+  │               │ │  Power BI     │ │                │
+  │  BigQuery     │ │  Looker       │ │  SageMaker     │
+  │  Redshift     │ │  Tableau      │ │  Vertex AI     │
+  │  Snowflake    │ │  Looker Studio│ │                │
+  └───────────────┘ └───────────────┘ └────────────────┘
+
+
+====================================================================
+DIAGRAM 8: OMNICHANNEL ORDER FLOW (BOPIS — Buy Online, Pick Up In-Store)
+====================================================================
+
+  CUSTOMER
+     │
+     │  Browses online, selects
+     │  "Pick Up In-Store" option
+     ▼
+  ┌───────────────────────────────────────┐
+  │  CHECKOUT SERVICE                     │
+  │  Show stores with available stock     │
+  │  Customer selects store + time slot   │
+  └──────────────────┬────────────────────┘
+                     │
+                     ▼
+  ┌───────────────────────────────────────┐
+  │  ORDER SERVICE                        │
+  │  Create order: type = BOPIS           │
+  │  Publish: order.placed (BOPIS) event  │
+  └──────────────────┬────────────────────┘
+                     │
+           ┌─────────┴─────────┐
+           │                   │
+           ▼                   ▼
+  ┌─────────────────┐  ┌───────────────────────┐
+  │ PAYMENT SERVICE │  │ INVENTORY SERVICE      │
+  │ Capture payment │  │ Reserve stock at store │
+  └────────┬────────┘  └───────────┬────────────┘
+           │                       │
+           └───────────┬───────────┘
+                       │
+                       ▼
+  ┌───────────────────────────────────────┐
+  │  STORE MANAGEMENT SYSTEM              │
+  │  Alert store associate: new BOPIS     │
+  │  Print pick ticket                    │
+  │  Associate picks item from shelf      │
+  │  Marks order as "Ready for Pickup"    │
+  └──────────────────┬────────────────────┘
+                     │
+                     ▼
+  ┌───────────────────────────────────────┐
+  │  NOTIFICATION SERVICE                 │
+  │  SMS/Email: "Your order is ready!"    │
+  │  Include: store address + barcode     │
+  └──────────────────┬────────────────────┘
+                     │
+                     ▼
+  CUSTOMER ARRIVES AT STORE
+  Shows barcode / ID at counter
+                     │
+                     ▼
+  ┌───────────────────────────────────────┐
+  │  POS SYSTEM                           │
+  │  Scan barcode → verify identity       │
+  │  Mark order as PICKED UP              │
+  │  Publish: order.completed event       │
+  └──────────────────┬────────────────────┘
+                     │
+                     ▼
+  ┌───────────────────────────────────────┐
+  │  POST-PURCHASE FLOWS                  │
+  │  • Award loyalty points               │
+  │  • Send review request (24hrs later)  │
+  │  • Suggest related products           │
+  └───────────────────────────────────────┘
+
+
+====================================================================
+DIAGRAM 9: SUPPLY CHAIN FLOW
+====================================================================
+
+  DEMAND FORECASTING MODEL
+  (predicts stock needed 30-90 days ahead)
+           │
+           ▼
+  ┌───────────────────────────────┐
+  │  REPLENISHMENT ENGINE         │
+  │  Current stock < Reorder pt? │
+  │       YES → Generate PO      │
+  │       NO  → Monitor          │
+  └──────────────┬────────────────┘
+                 │
+                 ▼
+  ┌───────────────────────────────┐
+  │  PURCHASE ORDER (PO)          │
+  │  Created in ERP system        │
+  │  Approval workflow (if >$X)   │
+  │  Sent to supplier via EDI/API │
+  └──────────────┬────────────────┘
+                 │
+                 ▼
+  ┌───────────────────────────────┐
+  │  SUPPLIER / VENDOR            │
+  │  Acknowledges PO              │
+  │  Prepares goods               │
+  │  Sends Advance Ship Notice    │
+  │  (ASN) with tracking          │
+  └──────────────┬────────────────┘
+                 │
+                 ▼
+  ┌───────────────────────────────┐
+  │  LOGISTICS / TRANSPORTATION   │
+  │  Freight carrier picks up     │
+  │  In-transit tracking updates  │
+  │  Customs clearance (if intl.) │
+  └──────────────┬────────────────┘
+                 │
+                 ▼
+  ┌───────────────────────────────┐
+  │  DISTRIBUTION CENTER / WH     │
+  │  Receive goods                │
+  │  Quality inspection           │
+  │  Putaway to bin locations     │
+  │  Stock levels updated in IMS  │
+  └──────────────┬────────────────┘
+                 │
+                 ▼
+  ┌───────────────────────────────┐
+  │  INVENTORY SERVICE            │
+  │  Publish: stock.replenished   │
+  │  Product page shows "In Stock"│
+  │  Back-order customers notified│
+  └───────────────────────────────┘
+
+
+====================================================================
+DIAGRAM 10: MICROSERVICES COMMUNICATION FLOW
+====================================================================
+
+  CLIENT REQUEST (e.g. Place Order)
+          │
+          ▼
+  ┌─────────────────┐
+  │   API GATEWAY   │  ← Auth, Rate Limit, Route
+  └────────┬────────┘
+           │ REST / gRPC
+           ▼
+  ┌─────────────────┐    sync call     ┌─────────────────┐
+  │  ORDER SERVICE  │─────────────────►│ INVENTORY SVC   │
+  │                 │◄─────────────────│ (check stock)   │
+  └────────┬────────┘   stock confirmed└─────────────────┘
+           │
+           │ sync call
+           ▼
+  ┌─────────────────┐
+  │ PAYMENT SERVICE │  ← charge customer
+  └────────┬────────┘
+           │
+           │ payment.completed (async event)
+           ▼
+  ┌─────────────────────────────────────────────────────┐
+  │                  KAFKA EVENT BUS                    │
+  └──┬──────────────┬───────────────┬──────────────────┘
+     │              │               │
+     ▼              ▼               ▼
+  ┌──────────┐ ┌──────────┐ ┌────────────────┐
+  │FULFILLMT │ │INVENTORY │ │ NOTIFICATION   │
+  │ SERVICE  │ │ SERVICE  │ │ SERVICE        │
+  │(pick,    │ │(decrement│ │(email, SMS,    │
+  │ pack,    │ │ stock)   │ │ push notif.)   │
+  │ ship)    │ └──────────┘ └────────────────┘
+  └──────────┘
+     │
+     │ shipment.dispatched (async event)
+     ▼
+  ┌─────────────────────────────────────────────────────┐
+  │                  KAFKA EVENT BUS                    │
+  └──┬──────────────┬───────────────────────────────────┘
+     │              │
+     ▼              ▼
+  ┌──────────┐ ┌────────────────┐
+  │TRACKING  │ │ NOTIFICATION   │
+  │ SERVICE  │ │ SERVICE        │
+  │          │ │ (ship email)   │
+  └──────────┘ └────────────────┘
+
+  ← Sync (REST/gRPC): used for real-time, blocking calls
+  ← Async (Events):   used for decoupled, non-blocking flows
+
+
+====================================================================
+DIAGRAM 11: BLACK FRIDAY SCALE-OUT ARCHITECTURE
+====================================================================
+
+  MILLIONS OF CONCURRENT USERS
+               │
+               ▼
+  ┌───────────────────────────────────────────────────────────┐
+  │                CDN EDGE LAYER                             │
+  │   CloudFront / Fastly / Akamai                            │
+  │   • Cache: product pages, images, static assets          │
+  │   • Absorb: 70-80% of traffic at the edge                │
+  │   • WAF + DDoS protection                                 │
+  └──────────────────────────┬────────────────────────────────┘
+                             │ Cache miss (20-30% traffic)
+                             ▼
+  ┌───────────────────────────────────────────────────────────┐
+  │              AUTO-SCALING COMPUTE                         │
+  │                                                           │
+  │   API Gateway (rate-limited)                              │
+  │         │                                                 │
+  │   ┌─────┴──────┬─────────────┬──────────────┐            │
+  │   ▼            ▼             ▼              ▼            │
+  │  Web Pods   Search Pods   Cart Pods    Product Pods      │
+  │  (×50)      (×20)         (×30)        (×30)            │
+  │   Kubernetes HPA — scales 5 → 100 pods in minutes        │
+  └──────────────────────────┬────────────────────────────────┘
+                             │
+              ┌──────────────┼──────────────────┐
+              │              │                  │
+              ▼              ▼                  ▼
+  ┌───────────────┐  ┌───────────────┐  ┌───────────────────┐
+  │  REDIS CACHE  │  │  READ REPLICA │  │  MESSAGE QUEUE    │
+  │  (Product,    │  │  DATABASE     │  │  (Order bursts    │
+  │   Sessions,   │  │  (×5 replicas │  │   absorbed by     │
+  │   Inventory)  │  │  for reads)   │  │   SQS / Kafka)    │
+  └───────────────┘  └───────────────┘  └───────────────────┘
+                                                │
+                                                │ Orders processed
+                                                │ asynchronously
+                                                ▼
+                                      ┌─────────────────────┐
+                                      │  ORDER PROCESSORS   │
+                                      │  (auto-scaled        │
+                                      │   worker pool)      │
+                                      └─────────────────────┘
+
+
+====================================================================
+SUMMARY OF ALL FLOWS
+====================================================================
+
+  Flow  1 : High-Level System Overview
+            All layers: channels → API GW → services → event bus → data
+
+  Flow  2 : Customer Purchase Journey (Happy Path)
+            Browse → Search → PDP → Cart → Checkout → Payment → Order
+            → Inventory → Fulfillment → WMS → Ship → Deliver
+
+  Flow  3 : Inventory Management
+            Order placed → Reserve stock → Decrement → Reorder trigger
+            → PO to vendor → Goods received → Stock replenished
+
+  Flow  4 : Payment Processing
+            Checkout → Tokenize → Fraud check → Gateway → Card network
+            → Issuing bank → Approve/Decline → Capture → Fulfill
+
+  Flow  5 : Returns & Refunds
+            Return request → RMA → Ship back → Inspect → Restock / Write-off
+            → Refund to original payment method
+
+  Flow  6 : Personalization & Recommendations
+            User behaviour → Clickstream → Feature store → ML model
+            → Real-time recommendations on web/app/email
+
+  Flow  7 : Data & Analytics Pipeline
+            All sources → Kafka/Batch ingestion → Bronze → Silver → Gold
+            → Data warehouse → BI dashboards + ML training
+
+  Flow  8 : Omnichannel BOPIS Flow
+            Buy online → Select store → Reserve store stock
+            → Alert associate → Ready notification → Customer pickup
+
+  Flow  9 : Supply Chain Flow
+            Demand forecast → Reorder trigger → PO → Supplier → Logistics
+            → DC receiving → Stock updated → Back-order customers notified
+
+  Flow 10 : Microservices Communication
+            Sync (REST/gRPC) for blocking calls
+            Async (Kafka events) for decoupled downstream flows
+
+  Flow 11 : Black Friday Scale-Out
+            CDN absorbs 80% → Auto-scaling K8s pods → Redis cache
+            → Read replicas → Queue-based order processing
