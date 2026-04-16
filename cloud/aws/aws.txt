@@ -1,0 +1,549 @@
+AMAZON WEB SERVICES (AWS) — CLOUD CONCEPTS
+==========================================
+
+Amazon Web Services (AWS) is the world's most comprehensive and broadly
+adopted cloud platform, offering 200+ fully featured services from data
+centers globally. Launched in 2006, AWS is the market leader in cloud
+computing with ~32% market share.
+
+------------------------------------------------------------
+CORE CLOUD CONCEPTS
+------------------------------------------------------------
+
+1. CLOUD SERVICE MODELS
+   ---------------------
+
+   IaaS (Infrastructure as a Service)
+     - You manage: OS, runtime, middleware, apps, data
+     - AWS manages: hardware, virtualization, networking, storage
+     - Examples: EC2, EBS, VPC
+
+   PaaS (Platform as a Service)
+     - You manage: apps and data only
+     - AWS manages: everything below the application layer
+     - Examples: Elastic Beanstalk, RDS, Lambda
+
+   SaaS (Software as a Service)
+     - AWS manages everything, you consume the software
+     - Examples: Amazon WorkMail, Amazon Chime, AWS Marketplace apps
+
+   Shared Responsibility Model:
+     AWS is responsible FOR the cloud  → hardware, infra, managed services
+     You are responsible IN the cloud  → data, apps, IAM, OS config, encryption
+
+
+2. CLOUD DEPLOYMENT MODELS
+   ------------------------
+   Public Cloud  : Resources on AWS shared infrastructure
+   Private Cloud : AWS Outposts (AWS hardware in your data center)
+   Hybrid Cloud  : On-premises + AWS (via Direct Connect or VPN)
+   Multi-Cloud   : AWS alongside Azure, GCP
+
+
+------------------------------------------------------------
+AWS GLOBAL INFRASTRUCTURE
+------------------------------------------------------------
+
+Regions
+  - A geographic area with multiple isolated data centers
+  - Examples: us-east-1 (N. Virginia), eu-west-1 (Ireland), ap-southeast-1 (Singapore)
+  - 33+ regions globally
+  - Choose region for: latency, compliance, data sovereignty, cost
+
+Availability Zones (AZs)
+  - One or more discrete data centers within a region
+  - Each AZ has independent power, cooling, and networking
+  - Connected via low-latency private fiber links
+  - Typically 3 AZs per region (some have 2, some have 6)
+  - Deploy across multiple AZs for high availability
+
+Local Zones
+  - AWS infrastructure placed closer to large population centers
+  - For ultra-low latency applications (gaming, media, AR/VR)
+  - Example: AWS Local Zone in Los Angeles, Chicago
+
+Edge Locations / Points of Presence (PoPs)
+  - 400+ edge locations worldwide
+  - Used by CloudFront (CDN) and Route 53 (DNS)
+  - Cache content close to end users globally
+
+AWS Wavelength
+  - Deploy AWS services at 5G network edge
+  - For single-digit millisecond latency to mobile devices
+
+AWS Outposts
+  - AWS-managed hardware installed in your own data center
+  - Run AWS services on-premises with same APIs and tools
+
+
+------------------------------------------------------------
+AWS CORE SERVICES
+------------------------------------------------------------
+
+COMPUTE
+-------
+
+Amazon EC2 (Elastic Compute Cloud)
+  - Virtual servers in the cloud (IaaS)
+  - Full control over OS, storage, networking
+  - Instance types: General (t3, m6), Compute (c6), Memory (r6), GPU (p4)
+  - Pricing: On-Demand, Reserved, Spot, Dedicated Hosts
+
+AWS Lambda
+  - Serverless compute — run code without managing servers
+  - Event-driven: API calls, S3 events, DynamoDB streams, SQS messages
+  - Supports: Python, Node.js, Java, Go, Ruby, .NET
+  - Pay only per invocation and duration (1M free requests/month)
+
+AWS Elastic Beanstalk
+  - PaaS — deploy and scale web apps automatically
+  - Upload code, Beanstalk handles provisioning, load balancing, scaling
+  - Supports: Python, Java, Node.js, PHP, Ruby, Go, .NET, Docker
+
+Amazon ECS (Elastic Container Service)
+  - Run and manage Docker containers
+  - Launch type: EC2 (you manage servers) or Fargate (serverless)
+
+Amazon EKS (Elastic Kubernetes Service)
+  - Managed Kubernetes cluster
+  - AWS manages the control plane, you manage worker nodes (or use Fargate)
+
+AWS Fargate
+  - Serverless compute engine for containers (ECS and EKS)
+  - No server management — pay for vCPU and memory used
+
+Amazon EC2 Auto Scaling
+  - Automatically add or remove EC2 instances based on demand
+  - Maintains availability and optimizes cost
+
+AWS Batch
+  - Fully managed batch computing at any scale
+  - Runs batch jobs on EC2 or Fargate
+
+
+STORAGE
+-------
+
+Amazon S3 (Simple Storage Service)
+  - Object storage — store any amount of data, any type of file
+  - Globally unique bucket names, 11 nines (99.999999999%) durability
+  - Storage classes:
+    * S3 Standard         → frequently accessed data
+    * S3 Standard-IA      → infrequently accessed, rapid retrieval
+    * S3 One Zone-IA      → infrequent, single AZ (lower cost)
+    * S3 Glacier Instant  → archive with millisecond retrieval
+    * S3 Glacier Flexible → archive, minutes-to-hours retrieval
+    * S3 Glacier Deep     → cheapest archive, 12-48 hour retrieval
+    * S3 Intelligent-Tiering → auto moves objects between tiers
+
+Amazon EBS (Elastic Block Store)
+  - Block storage for EC2 instances (like a hard drive)
+  - Types: gp3 (General SSD), io2 (High IOPS), st1 (Throughput HDD), sc1 (Cold HDD)
+  - Persists independently from EC2 instance lifecycle
+
+Amazon EFS (Elastic File System)
+  - Managed NFS file system — shared across multiple EC2 instances
+  - Auto-scales, multi-AZ, concurrent access
+
+Amazon FSx
+  - Managed third-party file systems
+  - FSx for Windows File Server, FSx for Lustre (HPC), FSx for NetApp ONTAP
+
+AWS Storage Gateway
+  - Hybrid cloud storage — connect on-premises to AWS storage
+  - Types: File Gateway, Tape Gateway, Volume Gateway
+
+AWS Snow Family
+  - Physical devices to migrate large data sets to AWS
+  - Snowcone (8TB), Snowball Edge (80TB), Snowmobile (100PB truck)
+
+
+NETWORKING
+----------
+
+Amazon VPC (Virtual Private Cloud)
+  - Your own private, isolated network in AWS
+  - Contains: subnets, route tables, internet gateway, NAT gateway
+  - Public subnets (internet-facing) vs Private subnets (internal only)
+
+Subnets
+  - Segments within a VPC, scoped to one Availability Zone
+  - Public subnet: has route to Internet Gateway
+  - Private subnet: routes through NAT Gateway for outbound-only internet
+
+Internet Gateway (IGW)
+  - Connects a VPC to the internet
+  - Attached to the VPC, added to public subnet route table
+
+NAT Gateway
+  - Allows private subnet instances to access internet (outbound only)
+  - Prevents inbound connections from the internet
+
+Security Groups
+  - Virtual firewall at the instance level
+  - Stateful — return traffic automatically allowed
+  - Default: deny all inbound, allow all outbound
+
+Network ACLs (NACLs)
+  - Firewall at the subnet level
+  - Stateless — must explicitly allow inbound AND outbound
+  - Numbered rules evaluated in order
+
+Elastic Load Balancing (ELB)
+  - Application Load Balancer (ALB): Layer 7, HTTP/HTTPS, path-based routing
+  - Network Load Balancer (NLB): Layer 4, TCP/UDP, ultra-low latency
+  - Gateway Load Balancer (GWLB): Deploy third-party network appliances
+
+Amazon Route 53
+  - Scalable DNS web service
+  - Routing policies: Simple, Weighted, Latency, Failover, Geolocation, Multi-value
+
+AWS CloudFront
+  - Global CDN — cache content at 400+ edge locations
+  - Reduce latency, protect with WAF and Shield
+
+AWS Direct Connect
+  - Dedicated private network connection from on-premises to AWS
+  - Consistent bandwidth, lower latency than internet VPN
+
+AWS VPN
+  - Site-to-Site VPN: encrypted tunnel from on-prem to VPC
+  - Client VPN: remote employees connect to AWS network
+
+VPC Peering
+  - Connect two VPCs privately (same or different accounts/regions)
+
+AWS Transit Gateway
+  - Hub-and-spoke network — connect hundreds of VPCs and on-prem networks
+
+
+DATABASES
+---------
+
+Amazon RDS (Relational Database Service)
+  - Managed relational databases — no patching, auto-backups, Multi-AZ
+  - Engines: MySQL, PostgreSQL, MariaDB, Oracle, SQL Server, Db2
+
+Amazon Aurora
+  - AWS-built relational database, compatible with MySQL and PostgreSQL
+  - 5x faster than MySQL, 3x faster than PostgreSQL
+  - Auto-scales storage up to 128TB, 6 copies across 3 AZs
+
+Amazon DynamoDB
+  - Fully managed NoSQL key-value and document database
+  - Single-digit millisecond performance at any scale
+  - Serverless — auto-scales, no capacity planning needed
+
+Amazon ElastiCache
+  - Managed in-memory caching (Redis or Memcached)
+  - Sub-millisecond latency for hot data
+
+Amazon Redshift
+  - Cloud data warehouse — petabyte-scale analytics
+  - Columnar storage, massively parallel processing
+
+Amazon DocumentDB
+  - Managed MongoDB-compatible document database
+
+Amazon Keyspaces
+  - Managed Apache Cassandra-compatible database
+
+Amazon Neptune
+  - Managed graph database (property graphs and RDF)
+
+Amazon Timestream
+  - Managed time series database for IoT and operational data
+
+Amazon MemoryDB for Redis
+  - Redis-compatible, durable in-memory database
+
+
+------------------------------------------------------------
+IDENTITY & SECURITY
+------------------------------------------------------------
+
+AWS IAM (Identity and Access Management)
+  - Manage users, groups, roles, and permissions
+  - Principle of least privilege — grant only what is needed
+  - IAM Policies: JSON documents defining permissions
+  - IAM Roles: temporary credentials for services/apps
+
+AWS Organizations
+  - Manage multiple AWS accounts centrally
+  - Service Control Policies (SCPs) — guardrails across all accounts
+  - Consolidated billing
+
+AWS Cognito
+  - User authentication for web and mobile apps
+  - User Pools (auth), Identity Pools (AWS resource access)
+  - Supports Google, Facebook, Apple, SAML federation
+
+AWS KMS (Key Management Service)
+  - Create and manage encryption keys
+  - Integrated with 100+ AWS services
+
+AWS Secrets Manager
+  - Store, rotate, and retrieve database credentials and API keys
+  - Automatic secret rotation
+
+AWS Certificate Manager (ACM)
+  - Provision and manage SSL/TLS certificates for free
+
+AWS WAF (Web Application Firewall)
+  - Protect web apps from SQL injection, XSS, and OWASP threats
+  - Works with CloudFront, ALB, API Gateway
+
+AWS Shield
+  - DDoS protection
+  - Standard: free, automatic for all AWS customers
+  - Advanced: enhanced protection with 24/7 DDoS response team
+
+Amazon GuardDuty
+  - Intelligent threat detection using ML
+  - Monitors CloudTrail, VPC flow logs, DNS logs
+
+AWS CloudTrail
+  - Log all API calls made in your AWS account
+  - Audit trail for security and compliance
+
+Amazon Inspector
+  - Automated vulnerability scanning for EC2 and containers
+
+AWS Security Hub
+  - Centralized security findings across all AWS services
+
+
+------------------------------------------------------------
+MONITORING & MANAGEMENT
+------------------------------------------------------------
+
+Amazon CloudWatch
+  - Monitor metrics, logs, and events from AWS resources
+  - Alarms: trigger actions when thresholds are breached
+  - Dashboards: visualize metrics in real time
+  - Log Groups: store and query application logs
+
+AWS CloudTrail
+  - Record every API call across your AWS account
+  - Who did what, when, and from where
+
+AWS Config
+  - Track configuration changes to AWS resources over time
+  - Assess compliance against rules
+
+AWS Systems Manager
+  - Manage EC2 and on-premises servers at scale
+  - Parameter Store: store config and secrets
+  - Session Manager: access EC2 without SSH or bastion hosts
+  - Patch Manager: automate OS patching
+
+AWS Trusted Advisor
+  - Real-time recommendations for cost, performance, security, fault tolerance
+  - Free tier: 7 core checks; Business/Enterprise: all checks
+
+AWS Well-Architected Tool
+  - Review workloads against AWS best practices
+  - Identify high-risk issues and improvement opportunities
+
+AWS Cost Explorer
+  - Visualize, understand, and manage AWS costs and usage
+  - Forecast future spend based on historical data
+
+AWS Budgets
+  - Set custom cost and usage budgets with alerts
+
+
+------------------------------------------------------------
+DEVELOPER & DEVOPS TOOLS
+------------------------------------------------------------
+
+AWS CodeCommit
+  - Managed Git repositories (similar to GitHub)
+
+AWS CodeBuild
+  - Fully managed CI — compile, test, and build artifacts
+
+AWS CodeDeploy
+  - Automate application deployments to EC2, Lambda, ECS
+
+AWS CodePipeline
+  - CI/CD orchestration — connect CodeCommit → CodeBuild → CodeDeploy
+
+AWS CodeArtifact
+  - Managed artifact repository (npm, Maven, pip, NuGet)
+
+Amazon ECR (Elastic Container Registry)
+  - Store, manage, and deploy Docker container images
+
+AWS CloudFormation
+  - Infrastructure as Code (IaC) — define AWS resources in JSON/YAML templates
+  - Stacks and change sets for safe, repeatable deployments
+
+AWS CDK (Cloud Development Kit)
+  - Define cloud infrastructure using real programming languages
+  - Python, TypeScript, Java, Go → compiles to CloudFormation
+
+AWS SAM (Serverless Application Model)
+  - Framework to build and deploy serverless apps (Lambda, API Gateway, DynamoDB)
+
+AWS CLI
+  - Command-line tool to manage all AWS services
+  - Automate operations, scripting, and CI/CD pipelines
+
+
+------------------------------------------------------------
+AI & MACHINE LEARNING
+------------------------------------------------------------
+
+Amazon SageMaker
+  - End-to-end ML platform: build, train, tune, deploy models
+  - SageMaker Studio, Autopilot (AutoML), Feature Store, Pipelines
+
+Amazon Bedrock
+  - Access foundation models (FMs) via API — Claude, Llama, Titan, Mistral
+  - Build generative AI apps without managing infrastructure
+
+Amazon Q
+  - AI assistant for business — chat with your data, code, and AWS
+
+Amazon Rekognition
+  - Image and video analysis (object detection, facial recognition, OCR)
+
+Amazon Transcribe
+  - Automatic Speech Recognition (ASR) — speech to text
+
+Amazon Polly
+  - Text to speech — lifelike voices in multiple languages
+
+Amazon Comprehend
+  - NLP: sentiment analysis, entity recognition, key phrase extraction
+
+Amazon Translate
+  - Neural machine translation — 75+ languages
+
+Amazon Lex
+  - Build conversational chatbots (powers Amazon Alexa)
+
+Amazon Kendra
+  - Intelligent enterprise search powered by ML
+
+Amazon Personalize
+  - Real-time personalization and recommendations
+
+Amazon Forecast
+  - Time series forecasting using ML
+
+
+------------------------------------------------------------
+MESSAGING & INTEGRATION
+------------------------------------------------------------
+
+Amazon SQS (Simple Queue Service)
+  - Fully managed message queue — decouple microservices
+  - Standard (at-least-once) and FIFO (exactly-once, ordered) queues
+  - Unlimited throughput, messages retained up to 14 days
+
+Amazon SNS (Simple Notification Service)
+  - Pub/Sub messaging — fan out notifications to multiple subscribers
+  - Protocols: SQS, Lambda, HTTP, email, SMS, mobile push
+
+Amazon EventBridge
+  - Serverless event bus — route events between AWS services and SaaS apps
+  - Event-driven architectures, scheduled rules (cron)
+
+Amazon Kinesis
+  - Real-time data streaming
+  - Kinesis Data Streams: custom real-time processing
+  - Kinesis Data Firehose: load streaming data to S3, Redshift, OpenSearch
+  - Kinesis Data Analytics: SQL/Apache Flink on streaming data
+
+AWS Step Functions
+  - Orchestrate Lambda functions and AWS services into workflows
+  - Visual state machine — retry logic, error handling, parallel steps
+
+Amazon MQ
+  - Managed message broker for Apache ActiveMQ and RabbitMQ
+  - For migrating existing on-premises messaging apps
+
+
+------------------------------------------------------------
+AWS PRICING MODEL
+------------------------------------------------------------
+
+Pay-as-you-go
+  - Pay only for what you use with no upfront costs
+  - Stop paying when you stop using resources
+
+Reserved Instances / Savings Plans
+  - Commit to 1 or 3 years — save up to 72%
+  - Savings Plans: flexible (applies across EC2, Lambda, Fargate)
+
+Spot Instances
+  - Use unused EC2 capacity at up to 90% discount
+  - Can be interrupted with 2-minute warning
+  - Best for: batch jobs, data processing, fault-tolerant workloads
+
+Dedicated Hosts
+  - Physical EC2 server dedicated to you
+  - Use existing server-bound software licenses (BYOL)
+
+Free Tier
+  - 12 months free: EC2 (750 hrs t2.micro), S3 (5GB), RDS (750 hrs)
+  - Always free: Lambda (1M requests/month), DynamoDB (25GB), CloudWatch
+
+
+------------------------------------------------------------
+AWS WELL-ARCHITECTED FRAMEWORK
+------------------------------------------------------------
+
+Six pillars of a well-architected AWS solution:
+
+1. Operational Excellence
+   - Infrastructure as Code, CI/CD, monitoring, runbooks
+   - Make frequent, small, reversible changes
+
+2. Security
+   - Identity foundation, enable traceability, protect all layers
+   - Least privilege, encrypt data at rest and in transit
+
+3. Reliability
+   - Auto recover from failure, scale horizontally, stop guessing capacity
+   - Multi-AZ, multi-region, backups, chaos engineering
+
+4. Performance Efficiency
+   - Use managed services, go global in minutes, use serverless
+   - Right instance types, caching, CDN
+
+5. Cost Optimization
+   - Adopt consumption model, measure efficiency, avoid undifferentiated heavy lifting
+   - Reserved capacity, Spot, right-sizing, S3 lifecycle policies
+
+6. Sustainability
+   - Maximize utilization, use managed services, reduce downstream impact
+   - Efficient data patterns, minimizing provisioned resources
+
+
+------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------
+
+AWS is the world's leading cloud platform, covering every layer of
+modern application infrastructure:
+
+  ✔ Compute    : EC2, Lambda, ECS, EKS, Fargate, Beanstalk
+  ✔ Storage    : S3, EBS, EFS, Glacier, FSx, Snow Family
+  ✔ Network    : VPC, ALB, NLB, Route 53, CloudFront, Direct Connect
+  ✔ Database   : RDS, Aurora, DynamoDB, Redshift, ElastiCache
+  ✔ Security   : IAM, KMS, Secrets Manager, WAF, Shield, GuardDuty
+  ✔ AI/ML      : SageMaker, Bedrock, Rekognition, Comprehend, Lex
+  ✔ DevOps     : CodePipeline, CloudFormation, CDK, ECR, CodeBuild
+  ✔ Messaging  : SQS, SNS, EventBridge, Kinesis, Step Functions
+  ✔ Monitoring : CloudWatch, CloudTrail, Config, Trusted Advisor
+
+AWS key strengths:
+  - Broadest and deepest service portfolio (200+ services)
+  - Largest global infrastructure (33+ regions, 100+ AZs)
+  - Most mature ecosystem — tools, partners, documentation
+  - Pioneer of serverless (Lambda), managed databases, and AI/ML
+  - Strongest community and certification programs (AWS Certifications)
+  - Market leader trusted by Netflix, Airbnb, NASA, and millions of companies

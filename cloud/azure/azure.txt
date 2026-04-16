@@ -1,0 +1,408 @@
+MICROSOFT AZURE — CLOUD CONCEPTS
+=================================
+
+Microsoft Azure is a cloud computing platform and service by Microsoft,
+offering 200+ products and services across compute, storage, networking,
+AI, databases, analytics, security, and more. It is the second largest
+cloud provider after AWS.
+
+------------------------------------------------------------
+CORE CLOUD CONCEPTS
+------------------------------------------------------------
+
+1. CLOUD SERVICE MODELS
+   ---------------------
+
+   IaaS (Infrastructure as a Service)
+     - You manage: OS, runtime, middleware, apps, data
+     - Azure manages: virtualization, servers, storage, networking
+     - Examples: Azure Virtual Machines, Azure Disk Storage
+
+   PaaS (Platform as a Service)
+     - You manage: apps and data only
+     - Azure manages: everything below the app layer
+     - Examples: Azure App Service, Azure SQL Database, Azure Functions
+
+   SaaS (Software as a Service)
+     - Azure manages everything, you just use the software
+     - Examples: Microsoft 365, Dynamics 365, Azure DevOps
+
+   Shared Responsibility Model:
+     On-premises  → You own everything
+     IaaS         → Azure owns hardware + virtualization
+     PaaS         → Azure owns infra + OS + runtime
+     SaaS         → Azure owns everything
+
+
+2. CLOUD DEPLOYMENT MODELS
+   ------------------------
+
+   Public Cloud  : Resources shared across customers, hosted by Azure
+   Private Cloud : Resources dedicated to a single organization
+   Hybrid Cloud  : Mix of on-premises + public cloud
+   Multi-Cloud   : Using Azure alongside AWS, GCP, or others
+
+
+------------------------------------------------------------
+AZURE GLOBAL INFRASTRUCTURE
+------------------------------------------------------------
+
+Regions
+  - A geographic area containing one or more data centers
+  - Examples: East US, West Europe, Southeast Asia
+  - 60+ regions globally (largest cloud footprint)
+  - Choose region for: latency, compliance, data residency
+
+Availability Zones
+  - Physically separate data centers within a region
+  - Each zone has independent power, cooling, and networking
+  - Protects against data center failures
+  - 3 zones per region (where supported)
+
+Region Pairs
+  - Every Azure region is paired with another region 300+ miles away
+  - Used for disaster recovery and geo-redundant replication
+  - Example: East US ↔ West US, North Europe ↔ West Europe
+
+Azure Geographies
+  - A discrete market (country or group of countries)
+  - Preserves data residency and compliance boundaries
+  - Example: US Geography contains East US, West US, Central US
+
+
+------------------------------------------------------------
+AZURE CORE SERVICES
+------------------------------------------------------------
+
+COMPUTE
+-------
+
+Azure Virtual Machines (VMs)
+  - IaaS — full control over OS and software
+  - Windows or Linux VMs
+  - Use for: lift-and-shift migrations, custom apps
+
+Azure App Service
+  - PaaS — host web apps, REST APIs, mobile backends
+  - Supports: Python, Node.js, Java, .NET, PHP, Ruby
+  - Auto-scaling, load balancing, CI/CD built-in
+
+Azure Functions
+  - Serverless compute — run code on demand
+  - Event-driven: HTTP triggers, timers, queues, blobs
+  - Pay only for execution time (consumption plan)
+
+Azure Kubernetes Service (AKS)
+  - Managed Kubernetes cluster
+  - Orchestrate containerized applications
+  - Auto-scaling, self-healing, rolling updates
+
+Azure Container Instances (ACI)
+  - Run containers without managing VMs or Kubernetes
+  - Fast startup, per-second billing
+
+Azure Virtual Machine Scale Sets
+  - Auto-scale a group of identical VMs
+  - Handles sudden traffic spikes automatically
+
+
+STORAGE
+-------
+
+Azure Blob Storage
+  - Object storage for unstructured data (files, images, videos, backups)
+  - Tiers: Hot (frequent access), Cool (infrequent), Archive (rare)
+  - Massively scalable — petabytes of data
+
+Azure Files
+  - Managed file shares accessible via SMB or NFS protocol
+  - Replace or extend on-premises file servers
+
+Azure Queue Storage
+  - Message queue for decoupling application components
+  - Stores millions of messages, async communication
+
+Azure Table Storage
+  - NoSQL key-value store for structured, non-relational data
+  - Simple and fast, low-cost
+
+Azure Disk Storage
+  - Block storage for Azure VMs (like a hard drive)
+  - Types: Ultra Disk, Premium SSD, Standard SSD, Standard HDD
+
+
+NETWORKING
+----------
+
+Azure Virtual Network (VNet)
+  - Private isolated network in Azure (like your own data center network)
+  - Contains subnets, route tables, network security groups
+
+Azure Load Balancer
+  - Distributes incoming traffic across multiple VMs
+  - Layer 4 (TCP/UDP) load balancing
+
+Azure Application Gateway
+  - Layer 7 (HTTP/HTTPS) load balancer
+  - Includes Web Application Firewall (WAF)
+
+Azure VPN Gateway
+  - Encrypted connection between Azure VNet and on-premises network
+  - Site-to-Site VPN or Point-to-Site VPN
+
+Azure ExpressRoute
+  - Dedicated private connection from on-premises to Azure
+  - Bypasses the public internet — more reliable and faster
+
+Azure DNS
+  - Host your DNS domains in Azure
+  - Ultra-fast global DNS resolution
+
+Azure Content Delivery Network (CDN)
+  - Cache content at edge locations worldwide
+  - Reduces latency for global users
+
+Azure Front Door
+  - Global load balancer + CDN + WAF combined
+  - Routes users to the nearest healthy backend
+
+
+DATABASES
+---------
+
+Azure SQL Database
+  - Fully managed relational database (SQL Server engine)
+  - PaaS — no patching, auto-backups, built-in HA
+
+Azure Cosmos DB
+  - Globally distributed, multi-model NoSQL database
+  - APIs: SQL, MongoDB, Cassandra, Gremlin, Table
+  - Single-digit millisecond latency, 99.999% SLA
+
+Azure Database for PostgreSQL
+  - Fully managed open-source PostgreSQL
+
+Azure Database for MySQL
+  - Fully managed open-source MySQL
+
+Azure Synapse Analytics
+  - Unified analytics platform (data warehouse + big data + BI)
+  - Combines SQL pools, Spark pools, and data integration
+
+Azure Cache for Redis
+  - Managed in-memory cache based on Redis
+  - Sub-millisecond response times for hot data
+
+
+------------------------------------------------------------
+IDENTITY & SECURITY
+------------------------------------------------------------
+
+Azure Active Directory (Azure AD / Entra ID)
+  - Cloud-based identity and access management
+  - Single Sign-On (SSO), Multi-Factor Authentication (MFA)
+  - Manages users, groups, and app registrations
+
+Role-Based Access Control (RBAC)
+  - Grant users only the permissions they need
+  - Roles: Owner, Contributor, Reader, custom roles
+  - Scoped at: management group, subscription, resource group, resource
+
+Azure Key Vault
+  - Securely store and manage secrets, keys, and certificates
+  - Apps retrieve secrets at runtime — no hardcoding credentials
+
+Microsoft Defender for Cloud
+  - Security posture management and threat protection
+  - Identifies vulnerabilities and provides remediation steps
+
+Azure DDoS Protection
+  - Protects Azure resources from Distributed Denial of Service attacks
+
+Network Security Groups (NSG)
+  - Virtual firewall — allow/deny inbound and outbound traffic rules
+
+
+------------------------------------------------------------
+MANAGEMENT & GOVERNANCE
+------------------------------------------------------------
+
+Azure Resource Manager (ARM)
+  - Deployment and management layer for all Azure resources
+  - Every Azure operation goes through ARM
+
+Resource Groups
+  - Logical container for related Azure resources
+  - Resources in a group share lifecycle, permissions, and billing
+
+Subscriptions
+  - Billing and access boundary for Azure resources
+  - One account can have multiple subscriptions
+
+Management Groups
+  - Organize multiple subscriptions under a hierarchy
+  - Apply policies and RBAC at scale
+
+Azure Policy
+  - Define and enforce rules across your Azure environment
+  - Example: "All VMs must use managed disks"
+
+Azure Monitor
+  - Collect, analyze, and act on telemetry from Azure resources
+  - Metrics, logs, alerts, dashboards
+
+Azure Log Analytics
+  - Query and analyze logs using KQL (Kusto Query Language)
+  - Centralizes logs from all Azure resources
+
+Azure Cost Management
+  - Track, analyze, and optimize Azure spending
+  - Budgets, alerts, and cost recommendations
+
+
+------------------------------------------------------------
+DEVELOPER & DEVOPS TOOLS
+------------------------------------------------------------
+
+Azure DevOps
+  - End-to-end DevOps platform
+  - Boards (work tracking), Repos (Git), Pipelines (CI/CD),
+    Test Plans, Artifacts (package management)
+
+Azure Pipelines
+  - CI/CD pipelines — build, test, and deploy automatically
+  - Supports any language, any platform, any cloud
+
+Azure Container Registry (ACR)
+  - Store and manage Docker container images privately
+
+GitHub Actions (integrated with Azure)
+  - Automate workflows directly from GitHub repos
+  - Deploy to Azure with official GitHub Actions
+
+Azure CLI / Azure PowerShell
+  - Command-line tools to manage Azure resources
+  - Automate deployments and operations from terminal
+
+
+------------------------------------------------------------
+AI & MACHINE LEARNING
+------------------------------------------------------------
+
+Azure OpenAI Service
+  - Access to GPT-4, DALL-E, Whisper, Embeddings via Azure
+  - Enterprise security, compliance, and private deployment
+
+Azure Machine Learning
+  - End-to-end ML platform: train, deploy, manage models
+  - Supports AutoML, MLflow, pipelines
+
+Azure AI Services (Cognitive Services)
+  - Pre-built AI APIs:
+    * Vision: image analysis, OCR, face detection
+    * Speech: speech-to-text, text-to-speech, translation
+    * Language: NLP, sentiment analysis, entity recognition
+    * Decision: anomaly detection, content moderation
+
+Azure Databricks
+  - Managed Apache Spark platform for big data and ML
+  - Collaborative notebooks, MLflow integration
+
+
+------------------------------------------------------------
+MESSAGING & INTEGRATION
+------------------------------------------------------------
+
+Azure Service Bus
+  - Enterprise message broker with queues and topics
+  - Reliable async communication between services
+
+Azure Event Hub
+  - Big data streaming platform — millions of events per second
+  - Use for: telemetry, logs, IoT data ingestion
+
+Azure Event Grid
+  - Event routing service — reacts to state changes in Azure
+  - Serverless event-driven architecture
+
+Azure Logic Apps
+  - Low-code workflow automation
+  - Integrate apps and services with 400+ connectors
+
+
+------------------------------------------------------------
+AZURE PRICING MODEL
+------------------------------------------------------------
+
+Pay-as-you-go
+  - Pay only for what you use, no upfront commitment
+  - Best for variable or unpredictable workloads
+
+Reserved Instances
+  - Commit to 1 or 3 years — save up to 72% vs pay-as-you-go
+  - Best for stable, predictable workloads
+
+Spot VMs
+  - Use spare Azure capacity at up to 90% discount
+  - Can be evicted with 30-second notice
+  - Best for fault-tolerant, batch workloads
+
+Azure Hybrid Benefit
+  - Use existing Windows Server or SQL Server licenses on Azure
+  - Save up to 40-85% compared to regular pricing
+
+Free Tier
+  - 12 months of popular services free
+  - 55+ services always free (Azure Functions 1M free executions/month)
+
+
+------------------------------------------------------------
+AZURE WELL-ARCHITECTED FRAMEWORK
+------------------------------------------------------------
+
+Five pillars of a well-architected Azure solution:
+
+1. Reliability
+   - Design for failure, use availability zones, replicate data
+   - Recovery Time Objective (RTO) and Recovery Point Objective (RPO)
+
+2. Security
+   - Defense in depth, zero trust, least privilege
+   - Encrypt data at rest and in transit
+
+3. Cost Optimization
+   - Right-size resources, use reserved capacity, delete unused resources
+   - Monitor with Azure Cost Management
+
+4. Operational Excellence
+   - Infrastructure as Code (ARM templates, Bicep, Terraform)
+   - Automate deployments, monitor health, run post-incident reviews
+
+5. Performance Efficiency
+   - Scale horizontally, use caching, CDN for global content
+   - Choose the right service for the workload
+
+
+------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------
+
+Azure is a comprehensive cloud platform that covers every layer of
+modern application infrastructure:
+
+  ✔ Compute   : VMs, App Service, Functions, AKS, Containers
+  ✔ Storage   : Blob, Files, Queues, Disks, Tables
+  ✔ Network   : VNet, Load Balancer, VPN, ExpressRoute, CDN
+  ✔ Database  : SQL, Cosmos DB, PostgreSQL, MySQL, Synapse
+  ✔ Security  : Azure AD, RBAC, Key Vault, Defender, DDoS
+  ✔ AI/ML     : OpenAI, Azure ML, Cognitive Services, Databricks
+  ✔ DevOps    : Azure DevOps, Pipelines, ACR, GitHub Actions
+  ✔ Messaging : Service Bus, Event Hub, Event Grid, Logic Apps
+  ✔ Governance: ARM, Resource Groups, Policy, Monitor, Cost Mgmt
+
+Azure's key strengths:
+  - Deep integration with Microsoft ecosystem (Windows, .NET, Office 365)
+  - Enterprise-grade compliance and security certifications
+  - Largest global data center footprint (60+ regions)
+  - Best hybrid cloud support via Azure Arc and ExpressRoute
+  - Strong AI/ML portfolio with Azure OpenAI Service
