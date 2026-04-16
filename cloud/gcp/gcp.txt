@@ -1,0 +1,652 @@
+GOOGLE CLOUD PLATFORM (GCP) — CLOUD CONCEPTS
+=============================================
+
+Google Cloud Platform (GCP) is Google's suite of cloud computing services
+built on the same infrastructure that powers Google Search, Gmail, YouTube,
+and Google Maps. GCP is the third largest cloud provider with ~11% market
+share, known for its leadership in AI/ML, data analytics, Kubernetes, and
+global networking.
+
+------------------------------------------------------------
+CORE CLOUD CONCEPTS
+------------------------------------------------------------
+
+1. CLOUD SERVICE MODELS
+   ---------------------
+
+   IaaS (Infrastructure as a Service)
+     - You manage: OS, runtime, middleware, apps, data
+     - GCP manages: hardware, virtualization, networking, storage
+     - Examples: Compute Engine, Persistent Disk, VPC
+
+   PaaS (Platform as a Service)
+     - You manage: apps and data only
+     - GCP manages: everything below the application layer
+     - Examples: App Engine, Cloud SQL, Cloud Functions
+
+   SaaS (Software as a Service)
+     - GCP manages everything, you consume the software
+     - Examples: Google Workspace (Gmail, Docs, Drive), Looker
+
+   Shared Responsibility Model:
+     GCP is responsible FOR the cloud  → hardware, infra, managed services
+     You are responsible IN the cloud  → data, apps, IAM, OS config, encryption
+
+
+2. CLOUD DEPLOYMENT MODELS
+   ------------------------
+   Public Cloud  : Resources on GCP shared infrastructure
+   Private Cloud : Google Distributed Cloud (on-premises hardware)
+   Hybrid Cloud  : On-premises + GCP (via Cloud Interconnect or VPN)
+   Multi-Cloud   : GCP alongside AWS, Azure (GCP promotes this via Anthos)
+
+
+------------------------------------------------------------
+GCP GLOBAL INFRASTRUCTURE
+------------------------------------------------------------
+
+Regions
+  - A geographic area with multiple zones
+  - Examples: us-central1, europe-west1, asia-east1, asia-south1
+  - 40+ regions globally
+  - Choose region for: latency, compliance, data residency, pricing
+
+Zones
+  - Isolated deployment areas within a region (like AZs in AWS)
+  - Each zone is a single data center cluster
+  - Typically 3 zones per region (e.g., us-central1-a, -b, -c)
+  - Deploy across zones for high availability
+
+Multi-Region
+  - Geographic grouping of regions for maximum redundancy
+  - Used by Cloud Storage, Spanner, Firestore for geo-redundancy
+  - Examples: US, EU, ASIA multi-regions
+
+Edge Network (PoPs)
+  - 200+ Points of Presence worldwide
+  - Google's private global fiber network — one of the largest on Earth
+  - Powers Cloud CDN, Cloud Armor, and global load balancing
+  - Traffic stays on Google's private network, not the public internet
+
+Google Distributed Cloud
+  - GCP hardware deployed in your own data center or edge location
+  - Run GCP services on-premises with same APIs (like AWS Outposts)
+
+
+------------------------------------------------------------
+GCP RESOURCE HIERARCHY
+------------------------------------------------------------
+
+Organization
+     └── Folders (optional grouping)
+              └── Projects
+                       └── Resources (VMs, buckets, databases, etc.)
+
+Organization
+  - Root node, maps to a company domain (e.g., example.com)
+  - Centralized policy and billing control
+
+Folders
+  - Group projects by department, team, or environment
+  - Example: Production Folder, Development Folder
+
+Projects
+  - Fundamental unit of GCP — every resource belongs to a project
+  - Has its own billing account, IAM policies, and API enablement
+  - Identified by: Project Name, Project ID (globally unique), Project Number
+
+Resources
+  - GCP services (VMs, buckets, databases) live inside projects
+
+IAM policies cascade down — set at organization level applies to all projects.
+
+
+------------------------------------------------------------
+GCP CORE SERVICES
+------------------------------------------------------------
+
+COMPUTE
+-------
+
+Google Compute Engine (GCE)
+  - IaaS — virtual machines on Google's infrastructure
+  - Machine families: General (E2, N2), Compute-optimized (C2), Memory (M2), GPU (A2)
+  - Persistent Disk, Local SSD, or RAM disk storage
+  - Preemptible VMs (like Spot): up to 80% cheaper, can be stopped anytime
+
+Google App Engine (GAE)
+  - PaaS — deploy web apps without managing servers
+  - Standard environment: fast scaling to zero, sandboxed runtimes
+  - Flexible environment: Docker containers, more runtime flexibility
+  - Supports: Python, Java, Node.js, Go, PHP, Ruby
+
+Google Kubernetes Engine (GKE)
+  - Managed Kubernetes — GCP invented Kubernetes, so GKE is the gold standard
+  - Autopilot mode: fully managed nodes (no node management)
+  - Standard mode: you manage node pools and configurations
+  - Deep integration with GCP services (Cloud Logging, Monitoring, IAM)
+
+Cloud Run
+  - Fully managed serverless containers — runs any containerized workload
+  - Auto-scales to zero when no traffic, scales up instantly
+  - No cluster management — just deploy a container
+  - Supports any language or framework via containers
+
+Cloud Functions
+  - Serverless functions — event-driven, lightweight code execution
+  - Triggers: HTTP, Pub/Sub, Cloud Storage, Firestore, Eventarc
+  - Supports: Python, Node.js, Go, Java, Ruby, PHP, .NET
+
+Cloud Functions (2nd gen) / Cloud Run Functions
+  - Built on Cloud Run — longer timeouts (60 min), larger instances
+  - Better for complex event-driven workloads
+
+Bare Metal Solution
+  - Run specialized workloads (Oracle DB, SAP) on dedicated bare metal hardware
+
+Batch
+  - Fully managed batch computing at scale on GCE and GKE
+
+
+STORAGE
+-------
+
+Cloud Storage (GCS)
+  - Object storage — store any type of data, any amount
+  - 11 nines (99.999999999%) durability
+  - Storage classes:
+    * Standard       → frequently accessed data
+    * Nearline        → accessed once a month or less (30-day min)
+    * Coldline        → accessed once a quarter or less (90-day min)
+    * Archive         → accessed once a year or less (365-day min), cheapest
+  - Multi-region, dual-region, or single-region buckets
+  - Signed URLs for temporary public access
+
+Persistent Disk
+  - Block storage for Compute Engine VMs
+  - Types: Standard (HDD), Balanced (SSD), SSD, Extreme SSD
+  - Can be attached to multiple VMs in read-only mode
+
+Local SSD
+  - High-performance ephemeral storage physically attached to the VM host
+  - Extremely fast I/O, but data lost when VM stops
+
+Filestore
+  - Managed NFS file storage — shared file system for GKE and GCE
+  - Tiers: Basic, Enterprise, High Scale
+
+Cloud Storage Transfer Service
+  - Move data from on-premises, AWS S3, or Azure Blob to GCS
+
+Transfer Appliance
+  - Physical hardware for offline data migration to GCP (petabyte scale)
+
+
+NETWORKING
+----------
+
+Virtual Private Cloud (VPC)
+  - Global resource — a single VPC spans all regions (unlike AWS per-region VPCs)
+  - Subnets are regional (not zonal)
+  - Shared VPC: share a VPC across multiple projects
+  - VPC Peering: connect VPCs privately
+
+Cloud Load Balancing
+  - Global and regional load balancers
+  - External HTTP(S) Load Balancer: Layer 7, global Anycast IP, SSL termination
+  - Internal HTTP(S) Load Balancer: Layer 7 for internal services
+  - External TCP/UDP Network LB: Layer 4, regional
+  - Internal TCP/UDP Load Balancer: Layer 4, internal traffic
+
+Cloud CDN
+  - Cache content at Google's global edge locations
+  - Works with HTTP(S) Load Balancer
+  - Reduce latency, lower bandwidth costs
+
+Cloud DNS
+  - Scalable, managed DNS — 100% SLA
+  - Supports public and private zones
+
+Cloud Armor
+  - DDoS protection and Web Application Firewall (WAF)
+  - Protect against OWASP Top 10, IP allowlist/denylist
+  - Works with HTTP(S) Load Balancer
+
+Cloud Interconnect
+  - Dedicated high-bandwidth connection from on-premises to GCP
+  - Dedicated Interconnect: direct physical connection (10Gbps or 100Gbps)
+  - Partner Interconnect: via service provider
+
+Cloud VPN
+  - Encrypted IPsec tunnel from on-premises to GCP VPC
+  - HA VPN: 99.99% SLA with two redundant tunnels
+
+Cloud NAT
+  - Allow private instances to reach internet without public IPs
+  - Outbound-only, no inbound connections allowed
+
+Network Intelligence Center
+  - Visualize network topology, monitor connectivity, debug issues
+
+Private Service Connect
+  - Privately access GCP services and third-party services without internet
+
+
+DATABASES
+---------
+
+Cloud SQL
+  - Fully managed relational database — no patching, auto-backups, HA
+  - Engines: MySQL, PostgreSQL, SQL Server
+
+Cloud Spanner
+  - Globally distributed, horizontally scalable relational database
+  - Unique: combines SQL relational + horizontal scaling + 99.999% SLA
+  - Used by Google internally for ads, payments, Gmail
+
+Cloud Bigtable
+  - Fully managed NoSQL wide-column database (HBase compatible)
+  - Petabyte-scale, millisecond latency
+  - Use for: IoT, time series, AdTech, financial data
+
+Firestore (Cloud Firestore)
+  - Serverless, scalable document database (like MongoDB)
+  - Real-time sync, offline support — great for mobile/web apps
+  - Native mode vs Datastore mode
+
+Firebase Realtime Database
+  - JSON-based real-time database for mobile apps
+  - Lower latency than Firestore for simple use cases
+
+BigQuery
+  - Serverless, petabyte-scale data warehouse and analytics engine
+  - SQL queries on massive datasets in seconds
+  - Built-in ML: BigQuery ML — train models with SQL
+  - Built-in BI: Connected Sheets, Looker Studio integration
+
+Memorystore
+  - Managed in-memory cache — Redis or Memcached
+  - Sub-millisecond latency for hot data
+
+AlloyDB
+  - PostgreSQL-compatible database with up to 4x faster queries
+  - Columnar engine for OLAP, vector search built-in
+
+Database Migration Service
+  - Migrate on-premises or cloud databases to Cloud SQL or AlloyDB
+
+
+------------------------------------------------------------
+IDENTITY & SECURITY
+------------------------------------------------------------
+
+Cloud IAM (Identity and Access Management)
+  - Control who can do what on which GCP resource
+  - Principals: Google Accounts, Service Accounts, Groups, Domains
+  - Roles: Basic (Owner/Editor/Viewer), Predefined, Custom
+  - Policies bind principals to roles on resources
+
+Service Accounts
+  - Identity for applications and VMs (not humans)
+  - Allows VMs and apps to access GCP services securely
+  - Best practice: one service account per application
+
+Cloud Identity
+  - Identity as a Service — manage users and groups
+  - Works with Google Workspace or standalone
+
+Cloud KMS (Key Management Service)
+  - Manage encryption keys — symmetric and asymmetric
+  - FIPS 140-2 Level 3 certified hardware security modules (HSMs)
+  - Customer-Managed Encryption Keys (CMEK) for GCP services
+
+Secret Manager
+  - Store, access, and manage secrets (passwords, API keys, certs)
+  - Versioning, automatic rotation, audit logging
+
+Cloud Armor
+  - WAF + DDoS protection
+  - Adaptive Protection: ML-based DDoS detection
+
+VPC Service Controls
+  - Create security perimeters around GCP resources
+  - Prevent data exfiltration even by authorized users
+
+Security Command Center
+  - Centralized security and risk platform for GCP
+  - Vulnerability scanning, threat detection, compliance monitoring
+
+BeyondCorp Enterprise
+  - Zero-trust access — verify identity and context, not just network location
+
+Binary Authorization
+  - Enforce only trusted container images are deployed to GKE
+
+
+------------------------------------------------------------
+MONITORING & MANAGEMENT
+------------------------------------------------------------
+
+Cloud Monitoring (formerly Stackdriver)
+  - Collect metrics from GCP, AWS, and on-premises resources
+  - Dashboards, alerting policies, uptime checks
+  - SLO monitoring and error budget tracking
+
+Cloud Logging
+  - Fully managed log storage and analysis
+  - Log Explorer: query logs using logging query language
+  - Log-based metrics, log sinks to BigQuery/GCS/Pub/Sub
+
+Cloud Trace
+  - Distributed tracing — understand latency in microservices
+
+Cloud Profiler
+  - Continuous CPU and memory profiling with minimal overhead
+
+Error Reporting
+  - Automatically detect and group application errors
+
+Cloud Debugger (deprecated → replaced by Cloud Profiler)
+
+Cloud Operations Suite
+  - Unified observability: Monitoring + Logging + Trace + Profiler
+
+Deployment Manager
+  - Infrastructure as Code using YAML or Python templates
+  - GCP's native IaC tool (Terraform is widely preferred)
+
+Resource Manager
+  - Manage GCP resource hierarchy (Org → Folders → Projects)
+
+Cloud Console
+  - Web-based GUI to manage all GCP services
+
+Cloud Shell
+  - Browser-based terminal with gcloud CLI pre-installed
+  - 5GB persistent home directory, free to use
+
+gcloud CLI
+  - Command-line tool to manage all GCP services
+  - Part of Google Cloud SDK (includes gsutil, bq, kubectl)
+
+Cloud Billing
+  - Manage budgets, alerts, and billing exports
+  - Export billing data to BigQuery for analysis
+
+
+------------------------------------------------------------
+DEVELOPER & DEVOPS TOOLS
+------------------------------------------------------------
+
+Cloud Source Repositories
+  - Managed private Git repositories hosted on GCP
+
+Cloud Build
+  - Fully managed CI/CD — build, test, deploy on GCP
+  - Serverless: no build agents to manage
+
+Artifact Registry
+  - Store and manage container images, Maven, npm, Python packages
+  - Replaces Container Registry
+
+Cloud Deploy
+  - Managed continuous delivery to GKE, Cloud Run, and GCE
+  - Progressive delivery: canary, blue/green deployments
+
+Cloud Code
+  - IDE plugins (VS Code, IntelliJ) for GCP development
+  - Kubernetes and Cloud Run development locally
+
+Skaffold
+  - Open-source tool for continuous development with Kubernetes
+
+Config Connector
+  - Manage GCP resources as Kubernetes custom resources
+
+Terraform on GCP
+  - Most popular IaC tool for GCP (Google maintains official provider)
+
+Cloud Endpoints / Apigee
+  - API management: Cloud Endpoints (lightweight), Apigee (enterprise)
+
+Firebase
+  - Mobile and web app development platform
+  - Authentication, Realtime DB, Firestore, Hosting, Cloud Messaging
+
+
+------------------------------------------------------------
+AI & MACHINE LEARNING
+------------------------------------------------------------
+
+Vertex AI
+  - Unified ML platform — build, deploy, and scale ML models
+  - AutoML: train models without writing ML code
+  - Custom training: TensorFlow, PyTorch, scikit-learn, XGBoost
+  - Vertex AI Pipelines: orchestrate ML workflows
+  - Model Registry, Feature Store, Experiments, Metadata
+
+Vertex AI Gemini API
+  - Access Gemini models (Google's most capable AI family)
+  - Gemini Pro, Gemini Flash, Gemini Ultra
+  - Multimodal: text, images, video, audio, code
+
+Vertex AI Search and Conversation
+  - Build enterprise search and chatbots with Google's AI
+
+Model Garden
+  - Discover and deploy 150+ foundation models (Google + open source)
+  - Includes: Gemini, Llama, Claude, Mistral, Imagen, Chirp
+
+Imagen
+  - Text-to-image generation and image editing
+
+Chirp
+  - Universal speech model — speech-to-text in 100+ languages
+
+Cloud Natural Language API
+  - Entity recognition, sentiment analysis, content classification
+
+Cloud Vision API
+  - Image analysis: object detection, OCR, face detection, landmark detection
+
+Cloud Speech-to-Text / Text-to-Speech
+  - Transcribe audio, synthesize speech in 100+ languages
+
+Cloud Translation API
+  - Neural machine translation — 100+ languages
+
+Cloud Video Intelligence API
+  - Analyze video content — scene detection, object tracking, transcription
+
+Document AI
+  - Extract structured data from documents, invoices, contracts
+
+BigQuery ML
+  - Train and deploy ML models using SQL in BigQuery
+
+Recommendations AI
+  - Real-time personalized product recommendations
+
+Dialogflow CX
+  - Build advanced conversational AI agents and chatbots
+
+
+------------------------------------------------------------
+DATA & ANALYTICS
+------------------------------------------------------------
+
+BigQuery
+  - Serverless, petabyte-scale data warehouse
+  - Analyze terabytes in seconds using SQL
+  - BigQuery ML, BigQuery Omni (query data in AWS/Azure), BI Engine
+
+Dataflow
+  - Fully managed Apache Beam service — stream and batch data pipelines
+  - Real-time ETL, event processing, ML inference
+
+Dataproc
+  - Managed Apache Spark and Hadoop
+  - Fast cluster creation (90 seconds), auto-scaling
+
+Pub/Sub
+  - Global, real-time messaging — ingestion and delivery at any scale
+  - Like AWS SNS+SQS combined — publish-subscribe model
+  - 10M+ messages/second throughput
+
+Cloud Composer
+  - Managed Apache Airflow — orchestrate complex data pipelines
+
+Looker / Looker Studio
+  - Looker: enterprise BI and data platform (LookML modeling layer)
+  - Looker Studio: free, self-service data visualization (like Tableau)
+
+Dataplex
+  - Intelligent data fabric — govern, catalog, and manage data across GCP
+
+Data Catalog
+  - Metadata management and data discovery across GCP
+
+Datastream
+  - Serverless CDC (Change Data Capture) and replication service
+
+Analytics Hub
+  - Share and exchange data assets across organizations
+
+
+------------------------------------------------------------
+MESSAGING & INTEGRATION
+------------------------------------------------------------
+
+Cloud Pub/Sub
+  - Asynchronous messaging — decouple producers and consumers
+  - Global, push/pull delivery, at-least-once delivery guarantee
+  - Pub/Sub Lite: lower-cost, zonal version
+
+Cloud Tasks
+  - Asynchronous task execution — schedule and dispatch tasks
+  - HTTP targets or App Engine handlers
+
+Cloud Scheduler
+  - Fully managed cron job service
+  - Schedule any job: HTTP/S, Pub/Sub, App Engine
+
+Eventarc
+  - Event-driven architecture — route events from GCP services to Cloud Run
+
+Workflows
+  - Orchestrate GCP APIs and HTTP services into serverless workflows
+  - Like AWS Step Functions
+
+Apigee
+  - Full lifecycle API management — design, secure, publish, monitor APIs
+  - Enterprise-grade: rate limiting, monetization, analytics
+
+
+------------------------------------------------------------
+GCP PRICING MODEL
+------------------------------------------------------------
+
+Pay-as-you-go
+  - Pay only for resources consumed, billed per second (minimum 1 minute)
+  - No upfront costs or termination fees
+
+Sustained Use Discounts (SUDs)
+  - Automatic discounts for running VMs for a significant portion of the month
+  - Up to 30% off — no commitment needed, applied automatically
+
+Committed Use Discounts (CUDs)
+  - Commit to 1 or 3 years of usage — save up to 57% (general) or 70% (memory)
+  - More flexible than AWS Reserved Instances
+
+Spot VMs (formerly Preemptible VMs)
+  - Use spare GCP capacity at up to 91% discount
+  - Can be reclaimed with 30-second warning
+  - Best for: batch jobs, fault-tolerant workloads, ML training
+
+Free Tier
+  - Always free: 1 f1-micro VM/month (us regions), 5GB Cloud Storage,
+    BigQuery (1TB queries/month, 10GB storage), Cloud Functions (2M invocations/month)
+  - $300 free credits for new accounts (90-day trial)
+
+Per-second Billing
+  - GCP pioneered per-second billing for VMs (AWS and Azure followed)
+  - Minimum 1 minute, then per second after that
+
+
+------------------------------------------------------------
+GCP WELL-ARCHITECTED FRAMEWORK
+------------------------------------------------------------
+
+Five pillars of a well-architected GCP solution:
+
+1. Operational Excellence
+   - Automate deployments with Cloud Build and Terraform
+   - Monitor with Cloud Operations Suite (Monitoring + Logging + Trace)
+   - SLO-based reliability with error budgets
+
+2. Security, Privacy, and Compliance
+   - Zero trust via BeyondCorp, VPC Service Controls
+   - Encrypt by default — all data encrypted at rest and in transit
+   - Least privilege IAM, separate service accounts per workload
+
+3. Reliability
+   - Multi-zone and multi-region deployments
+   - Global load balancing with health checks and failover
+   - Managed services reduce operational toil
+
+4. Performance Efficiency
+   - Use global load balancing with Anycast IPs
+   - Right-size VMs, use Autopilot for GKE
+   - BigQuery for analytics instead of managing clusters
+
+5. Cost Optimization
+   - Use Sustained Use Discounts (automatic) and Committed Use Discounts
+   - Rightsize VMs with Recommender
+   - Use Spot VMs for batch and ML workloads
+   - Set Budgets and alerts in Cloud Billing
+
+
+------------------------------------------------------------
+GCP vs AWS vs AZURE — KEY DIFFERENCES
+------------------------------------------------------------
+
+Feature               | GCP                    | AWS                 | Azure
+----------------------|------------------------|---------------------|----------------------
+Market share          | ~11%                   | ~32%                | ~22%
+Kubernetes            | Invented it (best GKE) | EKS                 | AKS
+AI/ML                 | Vertex AI, Gemini      | SageMaker, Bedrock  | Azure ML, OpenAI
+Data warehouse        | BigQuery (best)        | Redshift            | Synapse Analytics
+Global networking     | Best (private fiber)   | Good                | Good
+Serverless containers | Cloud Run (best)       | Fargate             | Container Apps
+VPC scope             | Global                 | Regional            | Regional
+Pricing               | SUDs (automatic)       | Reserved Instances  | Reserved Instances
+Open source strength  | Kubernetes, TF, Beam   | Good                | Good
+Hybrid cloud          | Anthos / Dist. Cloud   | Outposts            | Arc (best hybrid)
+Best for              | AI/ML, Data, K8s       | Broadest services   | Microsoft enterprise
+
+
+------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------
+
+GCP is the cloud platform built and run by the same team behind Google
+Search, Maps, Gmail, and YouTube — giving it unmatched strengths in:
+
+  ✔ Compute    : Compute Engine, App Engine, GKE, Cloud Run, Cloud Functions
+  ✔ Storage    : Cloud Storage, Persistent Disk, Filestore
+  ✔ Network    : Global VPC, Cloud Load Balancing, Cloud CDN, Cloud Armor
+  ✔ Database   : Cloud SQL, Spanner, Bigtable, Firestore, BigQuery, AlloyDB
+  ✔ Security   : Cloud IAM, Secret Manager, Cloud KMS, Security Command Center
+  ✔ AI/ML      : Vertex AI, Gemini, Imagen, Model Garden, BigQuery ML
+  ✔ Analytics  : BigQuery, Dataflow, Dataproc, Pub/Sub, Looker
+  ✔ DevOps     : Cloud Build, Artifact Registry, Cloud Deploy, Skaffold
+  ✔ Messaging  : Pub/Sub, Cloud Tasks, Eventarc, Workflows
+
+GCP key strengths:
+  - World's best private global network (traffic never touches public internet)
+  - Invented Kubernetes — GKE is the gold standard managed K8s service
+  - BigQuery is the most powerful serverless data warehouse available
+  - Leading AI/ML platform — Vertex AI, Gemini, TPUs for ML training
+  - Sustained Use Discounts are automatic — no commitment needed
+  - Cloud Run is the best serverless container platform
+  - Best choice for data analytics, AI/ML, and Kubernetes workloads
