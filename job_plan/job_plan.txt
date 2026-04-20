@@ -1,0 +1,598 @@
+================================================================================
+          JOB PREPARATION PLAN — DATA ENGINEERING + AI ENGINEERING
+================================================================================
+  Goal    : Land a high-paying role in Data Engineering / AI Engineering
+  Target  : $150K–$220K+ (Senior/Staff level at top-tier companies)
+  Timeline: 4–6 Months Structured Preparation
+
+================================================================================
+  TARGET ROLES
+================================================================================
+
+  - Data Engineer (Senior / Staff)
+  - AI/ML Engineer
+  - Machine Learning Engineer
+  - NLP Engineer
+  - Generative AI Engineer
+  - LLM Engineer
+  - Applied Scientist
+
+  Target Companies:
+    Tier 1 : Google, Meta, Amazon, Microsoft, Apple, Nvidia
+    Tier 2 : Databricks, Snowflake, Confluent, Stripe, Airbnb, Uber, LinkedIn
+    Tier 3 : Capital One, JPMorgan, Goldman Sachs, healthcare & fintech startups
+
+
+================================================================================
+  PHASE 1 — FOUNDATIONS (Weeks 1–4)
+================================================================================
+
+  Focus: Strengthen the core fundamentals across all areas.
+
+  -----------------------------------------------------------------------
+  1.1 DATA STRUCTURES AND ALGORITHMS (DSA)
+  -----------------------------------------------------------------------
+  This is the gateway to any top-tier tech company interview.
+
+  Topics to Master:
+    - Arrays & Strings
+    - Linked Lists (Singly, Doubly, Circular)
+    - Stacks and Queues
+    - HashMaps and HashSets
+    - Trees (Binary Tree, BST, AVL)
+    - Heaps / Priority Queues
+    - Graphs (BFS, DFS, Dijkstra, Topological Sort)
+    - Recursion and Backtracking
+    - Dynamic Programming (Memoization, Tabulation)
+    - Sorting Algorithms (Merge Sort, Quick Sort, Heap Sort)
+    - Binary Search
+    - Sliding Window & Two Pointer techniques
+    - Tries
+    - Union-Find / Disjoint Sets
+
+  Practice Plan:
+    Week 1 : Arrays, Strings, HashMaps, Two Pointers, Sliding Window
+    Week 2 : Linked Lists, Stacks, Queues, Trees, BST
+    Week 3 : Graphs (BFS/DFS), Heaps, Binary Search
+    Week 4 : Dynamic Programming, Backtracking, Mixed Problems
+
+  Resources:
+    - LeetCode (target: 150+ problems — Easy 30%, Medium 55%, Hard 15%)
+    - NeetCode.io (structured roadmap with video solutions)
+    - "Cracking the Coding Interview" by Gayle McDowell
+    - Blind 75 / Neetcode 150 lists
+
+  Daily Target: 2–3 LeetCode problems per day
+
+
+  -----------------------------------------------------------------------
+  1.2 PYTHON (Advanced)
+  -----------------------------------------------------------------------
+  Topics to Master:
+    - Data Types, Collections (list, dict, set, tuple, deque)
+    - List/Dict/Set Comprehensions
+    - Generators and Iterators
+    - Decorators and Context Managers
+    - OOP: Classes, Inheritance, Dunder methods, Abstract classes
+    - Functional Programming: map, filter, reduce, lambda
+    - Error Handling: try/except/finally, custom exceptions
+    - Concurrency: threading, multiprocessing, asyncio
+    - File I/O, JSON, CSV handling
+    - Type Hints and Mypy
+    - Unit Testing: pytest, unittest
+    - Virtual Environments, pip, Poetry
+    - Memory management and performance optimization
+
+  Practice:
+    - Build 2–3 small Python projects
+    - Solve 20+ Python-specific coding problems
+    - Write clean, PEP8-compliant, type-annotated code
+
+  Resources:
+    - "Fluent Python" by Luciano Ramalho
+    - RealPython.com
+    - Python docs (docs.python.org)
+
+
+================================================================================
+  PHASE 2 — DATA ENGINEERING CORE (Weeks 5–8)
+================================================================================
+
+  -----------------------------------------------------------------------
+  2.1 SQL (Advanced)
+  -----------------------------------------------------------------------
+  Topics to Master:
+    - SELECT, WHERE, GROUP BY, HAVING, ORDER BY
+    - JOINs (INNER, LEFT, RIGHT, FULL, CROSS, SELF)
+    - Subqueries and CTEs (WITH clause)
+    - Window Functions: ROW_NUMBER, RANK, DENSE_RANK, LAG, LEAD,
+                        NTILE, SUM OVER, AVG OVER
+    - Aggregations and GROUP BY tricks
+    - CASE WHEN statements
+    - Indexes and Query Optimization
+    - EXPLAIN and query execution plans
+    - Transactions, ACID properties
+    - Database Normalization (1NF, 2NF, 3NF, BCNF)
+    - Stored Procedures and Views
+    - Handling NULLs
+    - Date/Time functions
+
+  Practice:
+    - StrataScratch (Data Engineering + Analyst SQL problems)
+    - LeetCode SQL section (50+ problems)
+    - Mode Analytics SQL Tutorial
+
+  Interview Focus:
+    - Write efficient queries for large datasets
+    - Optimize slow queries
+    - Window function problems are VERY common in interviews
+
+
+  -----------------------------------------------------------------------
+  2.2 PYSPARK
+  -----------------------------------------------------------------------
+  Topics to Master:
+    - RDD vs DataFrame vs Dataset
+    - SparkContext and SparkSession
+    - Transformations (map, filter, flatMap, groupBy, join, union)
+    - Actions (count, collect, show, take, save)
+    - Spark SQL
+    - DataFrame API (select, withColumn, filter, groupBy, agg, join)
+    - Handling Nulls in Spark
+    - UDFs (User Defined Functions)
+    - Partitioning and Repartitioning
+    - Caching and Persistence
+    - Broadcast Joins vs Shuffle Joins
+    - Spark Execution Model (DAG, Stages, Tasks)
+    - Reading and Writing: Parquet, JSON, CSV, Delta
+    - Spark Streaming (Structured Streaming)
+    - Delta Lake basics
+
+  Practice:
+    - Build an end-to-end ETL pipeline using PySpark
+    - Work with large datasets (NYC Taxi, Wikipedia, etc.)
+    - Practice PySpark on Databricks Community Edition (free)
+
+  Resources:
+    - "Learning Spark" by O'Reilly
+    - Databricks Academy (free courses)
+    - PySpark documentation
+
+
+================================================================================
+  PHASE 3 — DATA ANALYSIS & ML FOUNDATIONS (Weeks 9–12)
+================================================================================
+
+  -----------------------------------------------------------------------
+  3.1 DATA ANALYSIS (Pandas, NumPy)
+  -----------------------------------------------------------------------
+
+  Pandas Topics:
+    - Series and DataFrame creation
+    - Indexing: loc, iloc, boolean indexing
+    - Data Cleaning: dropna, fillna, duplicates
+    - Merging: merge, concat, join
+    - GroupBy and Aggregations
+    - Apply and Lambda functions
+    - Pivot Tables and Crosstabs
+    - Time Series handling
+    - Reading: CSV, Excel, JSON, SQL, Parquet
+
+  NumPy Topics:
+    - Arrays: creation, indexing, slicing
+    - Broadcasting
+    - Linear Algebra operations
+    - Random number generation
+    - Vectorized operations vs loops
+    - Reshaping and stacking arrays
+
+  Practice:
+    - Kaggle datasets: perform EDA from scratch
+    - Solve 20+ Pandas interview problems (StrataScratch, LeetCode)
+
+
+  -----------------------------------------------------------------------
+  3.2 MACHINE LEARNING (PyTorch)
+  -----------------------------------------------------------------------
+
+  Classical ML Topics:
+    - Linear and Logistic Regression
+    - Decision Trees and Random Forest
+    - Gradient Boosting (XGBoost, LightGBM)
+    - SVM, KNN, Naive Bayes
+    - Clustering: K-Means, DBSCAN
+    - Evaluation Metrics: Accuracy, F1, AUC-ROC, RMSE
+    - Cross-Validation and Hyperparameter Tuning
+    - Feature Engineering, Scaling, Encoding
+    - Handling imbalanced datasets
+
+  PyTorch Specific Topics:
+    - Tensors: creation, operations, GPU support
+    - Autograd: automatic differentiation
+    - Building Neural Networks with nn.Module
+    - Loss Functions: CrossEntropyLoss, MSELoss, BCELoss
+    - Optimizers: SGD, Adam, AdamW
+    - Training Loop: forward pass, loss, backward, optimizer step
+    - DataLoader and Dataset classes
+    - Model saving and loading (state_dict)
+    - Transfer Learning with pretrained models (torchvision)
+    - GPU Training with .to(device)
+
+  Practice:
+    - Implement a classifier from scratch in PyTorch
+    - Fine-tune a pretrained model (ResNet, BERT) on a new task
+    - Work through fast.ai or PyTorch official tutorials
+
+  Resources:
+    - PyTorch official tutorials (pytorch.org)
+    - "Deep Learning with PyTorch" by Eli Stevens
+    - fast.ai practical deep learning course
+
+
+================================================================================
+  PHASE 4 — DEEP LEARNING & NLP (Weeks 13–16)
+================================================================================
+
+  -----------------------------------------------------------------------
+  4.1 DEEP LEARNING
+  -----------------------------------------------------------------------
+  Topics to Master:
+    - Feedforward Neural Networks (MLP)
+    - Convolutional Neural Networks (CNNs) — Image tasks
+    - Recurrent Neural Networks (RNNs, LSTMs, GRUs) — Sequential data
+    - Attention Mechanism
+    - Transformers Architecture (Encoder, Decoder, Self-Attention)
+    - Batch Normalization, Layer Normalization
+    - Regularization: Dropout, Weight Decay
+    - Learning Rate Schedulers
+    - Gradient Clipping
+    - Mixed Precision Training (fp16/bf16)
+
+  Key Deep Learning Architectures to Know:
+    - ResNet, VGG (Computer Vision)
+    - BERT, GPT, T5 (NLP)
+    - Stable Diffusion (Generative)
+    - CLIP (Vision + Language)
+
+
+  -----------------------------------------------------------------------
+  4.2 NATURAL LANGUAGE PROCESSING (NLTK + Modern NLP)
+  -----------------------------------------------------------------------
+  NLTK Topics:
+    - Tokenization (word, sentence)
+    - Stopword removal
+    - Stemming and Lemmatization
+    - POS Tagging (Part of Speech)
+    - Named Entity Recognition (NER)
+    - Chunking and Parsing
+    - Frequency Distribution
+    - Text Classification pipeline
+
+  Modern NLP Topics (Beyond NLTK — Critical for Jobs):
+    - Word Embeddings: Word2Vec, GloVe, FastText
+    - Sentence Embeddings: Sentence-BERT, Universal Sentence Encoder
+    - Transformer Models: BERT, RoBERTa, DistilBERT, GPT-2
+    - Hugging Face Transformers library
+    - Fine-tuning BERT/GPT for classification, NER, Q&A
+    - Text Preprocessing Pipelines
+    - Vectorization: TF-IDF, Bag of Words
+
+  Practice:
+    - Build a sentiment analysis classifier (NLTK + BERT)
+    - Build a Named Entity Recognition pipeline
+    - Fine-tune a HuggingFace model on a custom dataset
+
+
+================================================================================
+  PHASE 5 — GENERATIVE AI & LLMs (Weeks 17–20)
+================================================================================
+
+  -----------------------------------------------------------------------
+  5.1 GENERATIVE AI
+  -----------------------------------------------------------------------
+  Topics to Master:
+    - What is Generative AI? Types: Text, Image, Audio, Video generation
+    - Variational Autoencoders (VAEs)
+    - Generative Adversarial Networks (GANs) — basics
+    - Diffusion Models — how they work
+    - Prompt Engineering: Zero-shot, Few-shot, Chain-of-Thought
+    - Retrieval Augmented Generation (RAG)
+    - Embeddings and Vector Databases (Pinecone, ChromaDB, FAISS)
+    - Evaluation of Generative Models (BLEU, ROUGE, BERTScore)
+
+
+  -----------------------------------------------------------------------
+  5.2 LARGE LANGUAGE MODELS (LLMs)
+  -----------------------------------------------------------------------
+  Topics to Master:
+    - Transformer architecture in depth (Multi-head attention, FFN, PE)
+    - Pre-training vs Fine-tuning vs RLHF
+    - Instruction Tuning and RLHF (Reinforcement Learning from Human Feedback)
+    - Parameter Efficient Fine-Tuning: LoRA, QLoRA, Adapters
+    - Quantization: INT8, INT4, GPTQ, GGUF
+    - LLM Inference Optimization (KV Cache, vLLM, TensorRT)
+    - Context Length and Long-Context LLMs
+    - Popular LLMs: GPT-4, Claude, LLaMA, Mistral, Gemini, Phi
+    - Open-source LLMs: LLaMA 2/3, Mistral, Falcon, Mixtral
+
+  Frameworks to Know:
+    - LangChain : Building LLM applications and agents
+    - LlamaIndex : Data ingestion and RAG pipelines
+    - Hugging Face: Model hub, Transformers, Datasets, PEFT
+    - Ollama     : Run LLMs locally
+    - OpenAI API : GPT-4, embeddings, function calling
+    - Anthropic Claude API : claude-sonnet-4-6, claude-opus-4-7
+    - Weights & Biases: Experiment tracking
+
+  Hands-on Projects:
+    - Build a RAG chatbot over a PDF document
+    - Fine-tune LLaMA or Mistral on a custom dataset using QLoRA
+    - Build an AI agent with LangChain tools
+    - Create a semantic search engine with embeddings + FAISS
+
+
+================================================================================
+  PHASE 6 — SYSTEM DESIGN & INTERVIEW PREP (Weeks 21–24)
+================================================================================
+
+  -----------------------------------------------------------------------
+  6.1 DATA ENGINEERING SYSTEM DESIGN
+  -----------------------------------------------------------------------
+  Topics:
+    - Batch vs Streaming processing (Lambda / Kappa Architecture)
+    - Data Warehouse vs Data Lake vs Lakehouse
+    - ETL vs ELT
+    - Schema Design: Star Schema, Snowflake Schema
+    - Data Modeling: Kimball, Inmon methodologies
+    - Partitioning, Bucketing, Indexing strategies
+    - Data Quality and Observability
+    - Orchestration: Apache Airflow, Prefect, Dagster
+    - Messaging: Apache Kafka
+    - Storage: S3, ADLS, GCS
+    - Query Engines: Spark, Trino/Presto, BigQuery, Redshift, Snowflake
+    - CDC (Change Data Capture): Debezium
+    - Data Catalog and Lineage: Apache Atlas, DataHub
+
+  Common System Design Questions:
+    - Design a real-time data pipeline (Kafka + Spark Streaming)
+    - Design a data warehouse for e-commerce transactions
+    - Design a feature store for ML models
+    - Design a log ingestion and analytics system
+
+
+  -----------------------------------------------------------------------
+  6.2 ML / AI SYSTEM DESIGN
+  -----------------------------------------------------------------------
+  Topics:
+    - End-to-end ML pipeline architecture
+    - Feature Stores (Feast, Tecton)
+    - Model Training Infrastructure (Kubeflow, SageMaker, Vertex AI)
+    - Model Serving: REST API, gRPC, batch inference
+    - A/B Testing and Model Experimentation
+    - Model Monitoring: Data Drift, Concept Drift, Performance degradation
+    - ML Metadata and Experiment Tracking (MLflow)
+    - Vector Databases for LLM applications
+    - LLM application architecture (RAG, Agents, Memory)
+
+  Common System Design Questions:
+    - Design a recommendation system
+    - Design a fraud detection system
+    - Design an LLM-powered customer support chatbot
+    - Design a real-time ML prediction service
+
+
+================================================================================
+  HANDS-ON PORTFOLIO PROJECTS
+================================================================================
+
+  Build and publish these on GitHub:
+
+  Project 1 : End-to-End Data Pipeline
+               - Ingest raw data (CSV/API) → PySpark ETL → Store in Parquet
+               - Orchestrate with Airflow
+               - Query with SQL (Spark SQL or Trino)
+
+  Project 2 : ML Classification Pipeline
+               - EDA with Pandas/Matplotlib
+               - Feature engineering and preprocessing
+               - Train multiple models (Random Forest, XGBoost, Neural Network)
+               - Evaluate and compare models
+               - Serve via FastAPI endpoint
+
+  Project 3 : NLP Sentiment Analyzer
+               - Use NLTK for preprocessing
+               - Fine-tune BERT with PyTorch on custom dataset
+               - Deploy as REST API
+
+  Project 4 : RAG-based LLM Chatbot
+               - Ingest documents (PDF, text)
+               - Generate embeddings and store in FAISS/ChromaDB
+               - Retrieve relevant chunks and feed to LLM
+               - Frontend with Streamlit or Gradio
+
+  Project 5 : Real-time Streaming Pipeline
+               - Produce events to Kafka
+               - Consume and process with Spark Structured Streaming
+               - Store results to Delta Lake
+               - Visualize with simple dashboard
+
+  Project 6 : LLM Fine-tuning
+               - Fine-tune LLaMA or Mistral with QLoRA
+               - Domain-specific dataset (finance, healthcare, etc.)
+               - Evaluate with BLEU/ROUGE scores
+               - Push to Hugging Face Hub
+
+
+================================================================================
+  INTERVIEW PREPARATION STRATEGY
+================================================================================
+
+  Round 1 : Recruiter Screen (30 min)
+    - Research the company's data/AI products
+    - Prepare a 2-min self-introduction highlighting impact
+    - Salary: Know your target range upfront
+
+  Round 2 : Technical Phone Screen (45–60 min)
+    - LeetCode Medium DSA problem
+    - 1–2 SQL or PySpark questions
+    - Basic ML concept questions
+
+  Round 3 : Technical Interviews (Multiple rounds)
+    - Coding: 2–3 LeetCode-style problems
+    - SQL Deep Dive: Complex window functions, optimization
+    - ML/AI Design: Design an ML system end-to-end
+    - Data Engineering Design: Pipeline architecture
+    - ML Concepts: Theory questions on algorithms, metrics
+
+  Round 4 : Behavioral (STAR Method)
+    - Situation, Task, Action, Result
+    - Prepare 5–7 strong stories from past experience
+    - Focus on: Impact, Scale, Cross-team collaboration, Ambiguity
+
+
+  Common Interview Questions by Topic:
+
+    DSA:
+      - Two Sum, LRU Cache, Merge K Sorted Lists
+      - Graph BFS/DFS problems, Dijkstra
+      - Dynamic Programming: Coin Change, Longest Common Subsequence
+
+    SQL:
+      - Find the Nth highest salary
+      - Running totals, moving averages (window functions)
+      - Users active on consecutive days
+
+    PySpark:
+      - Explain the difference between RDD and DataFrame
+      - How do you handle skewed data in joins?
+      - What is the difference between cache() and persist()?
+      - Explain lazy evaluation in Spark
+
+    ML/AI:
+      - How do you handle class imbalance?
+      - Explain the bias-variance tradeoff
+      - How does gradient descent work?
+      - Explain attention mechanism in Transformers
+      - How does RAG work?
+      - What is LoRA and why is it used?
+
+    System Design:
+      - Design a real-time fraud detection system
+      - Design a recommendation engine for a video platform
+      - Design an LLM-powered enterprise search tool
+
+
+================================================================================
+  WEEKLY SCHEDULE (SAMPLE)
+================================================================================
+
+  Monday    : DSA (2 LeetCode problems) + Python
+  Tuesday   : SQL problems + PySpark concepts
+  Wednesday : ML/Deep Learning (PyTorch practice)
+  Thursday  : NLP / LLM topics + project work
+  Friday    : System Design reading + mock interview
+  Saturday  : Project building (3–4 hours)
+  Sunday    : Review weak areas + company research
+
+
+================================================================================
+  SALARY NEGOTIATION TIPS
+================================================================================
+
+  1. Never give a number first — let them anchor
+  2. Research market rates: levels.fyi, Glassdoor, Blind, Glassdoor
+  3. Always negotiate — 90% of offers have room to move
+  4. Negotiate base, bonus, equity (RSUs), sign-on separately
+  5. Use competing offers as leverage
+  6. Be ready to justify your ask with market data
+  7. Target Total Compensation (TC), not just base salary
+
+  Salary Benchmarks (US Market, 2025):
+    Mid-Level Data/AI Engineer  : $130K–$170K base, $180K–$250K TC
+    Senior Data/AI Engineer     : $160K–$210K base, $250K–$400K TC
+    Staff/Principal Engineer    : $200K–$260K base, $400K–$700K+ TC
+
+  Top-paying companies for Data/AI roles:
+    Google, Meta, Apple, Microsoft, Nvidia, Stripe, Databricks, Snowflake
+
+
+================================================================================
+  RESOURCES SUMMARY
+================================================================================
+
+  Platform          | Use For
+  ------------------|----------------------------------------------------------
+  LeetCode          | DSA practice (primary)
+  NeetCode.io       | DSA roadmap and video explanations
+  StrataScratch     | SQL and Data Science interview questions
+  HackerRank        | SQL, Python challenges
+  Kaggle            | ML projects, datasets, competitions
+  Databricks CE     | Free PySpark practice environment
+  Hugging Face      | NLP models, datasets, spaces
+  fast.ai           | Practical Deep Learning course (free)
+  DeepLearning.ai   | ML, NLP, LLM specialization courses
+  Coursera/edX      | Structured courses with certificates
+  YouTube           | Andrej Karpathy (LLM), 3Blue1Brown (Math), Yannic Kilcher
+  GitHub            | Portfolio projects, open source contributions
+  levels.fyi        | Salary benchmarks by company and role
+  Blind / Reddit    | Interview experiences and company insights
+  LinkedIn          | Networking, job applications, recruiter outreach
+
+
+================================================================================
+  NETWORKING STRATEGY
+================================================================================
+
+  1. LinkedIn Optimization:
+     - Professional photo, strong headline
+     - Keyword-rich summary with skills
+     - Add all projects with measurable impact
+     - Get 3–5 strong recommendations
+
+  2. Reach out to Recruiters:
+     - Connect with technical recruiters at target companies
+     - Send personalized messages mentioning specific teams
+
+  3. Community Engagement:
+     - Join Data Engineering / MLOps Slack/Discord communities
+     - Attend local or virtual meetups (Meetup.com)
+     - Contribute to open-source projects
+
+  4. Referrals:
+     - Get internal referrals — increases interview chances by 5–10x
+     - Reach out to former colleagues now at target companies
+
+
+================================================================================
+  6-MONTH MILESTONE CHECKLIST
+================================================================================
+
+  Month 1 : [ ] Complete 50 LeetCode problems
+            [ ] Python advanced topics reviewed
+            [ ] SQL fundamentals and window functions mastered
+
+  Month 2 : [ ] Complete 100 LeetCode problems
+            [ ] PySpark ETL pipeline built
+            [ ] StrataScratch 30+ SQL problems solved
+
+  Month 3 : [ ] ML classification project completed (PyTorch)
+            [ ] NLTK + BERT NLP project completed
+            [ ] Portfolio on GitHub with 3 projects
+
+  Month 4 : [ ] RAG chatbot project built
+            [ ] LLM fine-tuning experiment done
+            [ ] System design reading complete
+
+  Month 5 : [ ] Mock interviews started (5+ sessions)
+            [ ] Applied to 20+ companies
+            [ ] Behavioral stories prepared (STAR method)
+
+  Month 6 : [ ] Actively interviewing at 5+ companies
+            [ ] Negotiating offers
+            [ ] Target: signed offer letter
+
+
+================================================================================
+                          YOU CAN DO THIS. STAY CONSISTENT.
+              One hour of focused prep per day beats 10 hours once a week.
+================================================================================
