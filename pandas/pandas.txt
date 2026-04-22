@@ -1,0 +1,90 @@
+Pandas
+======
+
+Pandas is a powerful Python library for data manipulation and analysis.
+It provides fast, flexible data structures designed to work with structured (tabular) data.
+
+
+Core Data Structures
+--------------------
+
+1. Series - a 1D labeled array
+
+    import pandas as pd
+
+    scores = pd.Series([85, 90, 78], index=["Alice", "Bob", "Charlie"])
+    print(scores["Alice"])  # → 85
+
+2. DataFrame - a 2D table (rows + columns), like a spreadsheet
+
+    df = pd.DataFrame({
+        "name": ["Alice", "Bob", "Charlie"],
+        "age":  [30, 25, 35],
+        "city": ["New York", "Austin", "Chicago"]
+    })
+
+
+Core Operations
+---------------
+
+Reading data:
+    df = pd.read_csv("data.csv")
+    df = pd.read_json("data.json")
+    df = pd.read_excel("data.xlsx")
+
+Exploring data:
+    df.head()        # first 5 rows
+    df.tail()        # last 5 rows
+    df.shape         # (rows, columns)
+    df.info()        # column types & nulls
+    df.describe()    # stats summary
+
+Selecting data:
+    df["name"]               # single column
+    df[["name", "age"]]      # multiple columns
+    df.iloc[0]               # row by index number
+    df.loc[0, "name"]        # row + column by label
+
+Filtering:
+    df[df["age"] > 25]
+    df[(df["age"] > 25) & (df["city"] == "Austin")]
+
+Adding / Modifying columns:
+    df["senior"] = df["age"] > 30
+    df["age"] = df["age"] + 1
+
+Handling missing values:
+    df.isnull().sum()         # count nulls per column
+    df.dropna()               # drop rows with nulls
+    df.fillna(0)              # replace nulls with 0
+
+Aggregations:
+    df["age"].mean()
+    df["age"].max()
+    df.groupby("city")["age"].mean()
+
+Sorting:
+    df.sort_values("age", ascending=False)
+
+Saving data:
+    df.to_csv("output.csv", index=False)
+    df.to_json("output.json")
+
+
+Why Pandas?
+-----------
+
+- Fast operations    : Built on NumPy under the hood
+- Handles missing data: Built-in NaN support
+- Flexible I/O       : Reads CSV, JSON, Excel, SQL, Parquet, etc.
+- Integrates well    : Works with NumPy, Matplotlib, Scikit-learn, Spark
+
+
+Install
+-------
+
+    pip install pandas
+
+
+Pandas is the go-to tool for data cleaning, exploration, and preparation
+before feeding data into machine learning models.
