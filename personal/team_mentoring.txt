@@ -1,0 +1,168 @@
+TEAM MENTORING GUIDE
+=====================
+
+## What is Mentoring?
+
+  Mentoring is a relationship where an experienced person (mentor)
+  guides a less experienced person (mentee) to grow professionally
+  and personally — through advice, feedback, experience sharing,
+  and genuine investment in their success.
+
+  Mentoring vs Managing:
+    Manager   — responsible for your output and performance.
+    Mentor    — invested in your growth and potential.
+
+
+=====================
+## Types of Mentoring
+
+  Formal Mentoring      : Structured, assigned, goal-driven (org programs).
+  Informal Mentoring    : Natural relationship built over time.
+  Peer Mentoring        : Colleagues at similar levels learning from each other.
+  Reverse Mentoring     : Junior mentors senior on new skills (tech, trends).
+  Group Mentoring       : One mentor guides a small group.
+  Situational Mentoring : Short-term, focused on a specific challenge or skill.
+
+
+=====================
+## The Mentor's Role
+
+  - Guide, don't direct       : Ask questions that lead to their own answers.
+  - Share experience          : Stories of your own failures and wins are powerful.
+  - Give honest feedback      : Kind but truthful — not just what they want to hear.
+  - Open doors                : Make introductions, share opportunities.
+  - Listen first              : Understand where they are before advising.
+  - Challenge their thinking  : Push them beyond their comfort zone.
+  - Celebrate their growth    : Acknowledge progress, not just outcomes.
+  - Respect confidentiality   : What's shared in mentoring stays there.
+
+
+=====================
+## The Mentee's Role
+
+  - Come prepared             : Have questions and topics ready for each session.
+  - Be open and honest        : Share struggles, not just wins.
+  - Act on advice             : Mentors stay engaged when they see progress.
+  - Follow through            : Do what you said you'd do before the next session.
+  - Ask for what you need     : Don't wait for the mentor to guess.
+  - Respect their time        : Be punctual and focused.
+  - Give feedback             : Let the mentor know what is and isn't helping.
+
+
+=====================
+## Mentoring Session Structure
+
+  Frequency    : Bi-weekly or monthly (45–60 min)
+
+  Agenda:
+    1. Check-in           — How are things going? (5 min)
+    2. Progress Review    — Updates since last session (10 min)
+    3. Main Topic         — Deep dive on the focus area (25 min)
+    4. Advice & Feedback  — Mentor shares perspective (10 min)
+    5. Action Items       — What will the mentee do before next session (5 min)
+    6. Close              — Any final thoughts or questions (5 min)
+
+
+=====================
+## Powerful Mentoring Questions to Ask
+
+  For self-awareness:
+    - "What are your biggest strengths? Where do you struggle?"
+    - "What does success look like for you in 2 years?"
+    - "What's holding you back right now?"
+
+  For growth:
+    - "What's one thing you could do differently?"
+    - "What skill, if improved, would make the biggest difference?"
+    - "Who do you admire professionally and why?"
+
+  For problem-solving:
+    - "What options have you already considered?"
+    - "What would you do if you knew you couldn't fail?"
+    - "What advice would you give a friend in your situation?"
+
+  For reflection:
+    - "What did you learn from that experience?"
+    - "What would you do differently if you could go back?"
+    - "What are you most proud of this month?"
+
+
+=====================
+## Setting Mentoring Goals (SMART)
+
+  S — Specific   : Clearly defined, not vague.
+  M — Measurable : How will you know it's achieved?
+  A — Achievable : Realistic given current skills and time.
+  R — Relevant   : Tied to career or personal growth goals.
+  T — Time-bound : Has a clear deadline.
+
+  Example:
+    "I will improve my public speaking by presenting in 2 team meetings
+    and attending one workshop by end of Q2."
+
+
+=====================
+## Giving Feedback as a Mentor
+
+  - Be specific               : "In the meeting, when you..." not "You always..."
+  - Balance positive and constructive : Don't only correct — also affirm.
+  - Focus on behavior         : Not personality or character.
+  - Make it actionable        : Feedback without a next step is just criticism.
+  - Invite their reaction     : "How does that land with you?"
+
+  Feedback Framework (SBI):
+    Situation   → Behavior   → Impact
+
+    "When you presented the project update last week [S],
+    you skipped the risks section [B],
+    which left the team uncertain about the timeline [I].
+    Next time, include blockers even if they're unresolved."
+
+
+=====================
+## Building a Strong Mentoring Relationship
+
+  - Establish trust early     : Agree on confidentiality and openness.
+  - Set expectations upfront  : Frequency, format, goals, boundaries.
+  - Be consistent             : Show up prepared and on time, every time.
+  - Stay curious              : Genuine interest in the mentee's world.
+  - Adapt your style          : What works for one mentee may not work for another.
+  - Review progress regularly : Revisit goals every quarter.
+  - Know when to close        : A good mentoring relationship has a natural arc.
+
+
+=====================
+## Mentoring Development Areas (Common Focus Areas)
+
+  Technical Skills    : Deepening expertise in their domain.
+  Communication       : Written, verbal, and presentation skills.
+  Leadership          : Taking ownership, influencing without authority.
+  Problem Solving     : Structured thinking, decision-making.
+  Networking          : Building professional relationships.
+  Career Planning     : Mapping out short and long-term goals.
+  Confidence          : Overcoming self-doubt and imposter syndrome.
+  Work-Life Balance   : Managing energy, boundaries, and priorities.
+
+
+=====================
+## Mentoring Anti-Patterns (What to Avoid)
+
+  - Giving all the answers    : Teach them to think, not what to think.
+  - Making it about yourself  : The session is for the mentee, not the mentor.
+  - Being inconsistent        : Cancelling often damages trust.
+  - Only focusing on problems : Celebrate wins and strengths too.
+  - Pushing your career path  : Guide toward their goals, not yours.
+  - Skipping the check-in     : Emotional state affects everything else.
+  - Ignoring follow-up        : Action items with no accountability go nowhere.
+
+
+=====================
+## Golden Rules of Mentoring
+
+  1. Listen more than you advise.
+  2. Ask questions before giving answers.
+  3. Share your failures — they teach more than your successes.
+  4. Invest in the person, not just their current role.
+  5. The best mentors make themselves unnecessary over time.
+  6. Growth is uncomfortable — encourage them through it.
+  7. Be the mentor you wish you had.

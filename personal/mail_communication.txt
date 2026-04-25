@@ -1,0 +1,174 @@
+MAIL COMMUNICATION GUIDE
+=========================
+
+## Email Structure
+
+  1. Subject Line   — clear, specific, actionable
+  2. Greeting       — appropriate to the relationship
+  3. Opening line   — state the purpose immediately
+  4. Body           — context, details, ask
+  5. Call to Action — what you need and by when
+  6. Closing        — polite sign-off
+
+
+=========================
+## Subject Line Tips
+
+  - Be specific     : "Q2 Report Review — Action Needed by Friday"
+                      NOT "Important" or "Quick Question"
+  - Use flags       : [ACTION REQUIRED], [FYI], [URGENT], [DECISION NEEDED]
+  - Keep it short   : Under 60 characters so it doesn't get cut off.
+
+
+=========================
+## Greetings
+
+  Formal      : "Dear Mr./Ms. [Last Name],"
+  Professional: "Hi [First Name],"
+  Team/Group  : "Hi Team," / "Hello All,"
+  Casual      : "Hey [Name],"
+
+
+=========================
+## Email Types & Templates
+
+### 1. Request Email
+  Subject : [ACTION REQUIRED] Request for [Topic] — Due [Date]
+
+  Hi [Name],
+
+  I hope you're doing well.
+
+  I'm writing to request [specific ask].
+  [1-2 lines of context/reason].
+
+  Could you please [action] by [date]?
+
+  Let me know if you need any additional information.
+
+  Thanks,
+  [Your Name]
+
+---
+
+### 2. Follow-Up Email
+  Subject : Follow-Up: [Original Subject]
+
+  Hi [Name],
+
+  I wanted to follow up on my email from [date] regarding [topic].
+
+  [Restate the ask in one line].
+
+  Please let me know if you need anything from my end.
+
+  Thanks,
+  [Your Name]
+
+---
+
+### 3. Introduction Email
+  Subject : Introduction — [Your Name], [Your Role]
+
+  Hi [Name],
+
+  My name is [Your Name] and I'm [your role/context].
+
+  [1-2 lines about why you're reaching out or how you're connected].
+
+  I'd love to [connect / schedule a call / collaborate on X].
+
+  Looking forward to hearing from you.
+
+  Best regards,
+  [Your Name]
+
+---
+
+### 4. Status Update Email
+  Subject : Status Update: [Project/Task Name] — [Date]
+
+  Hi [Name/Team],
+
+  Here's a quick update on [project/task]:
+
+  - Completed : [what's done]
+  - In Progress: [what's ongoing]
+  - Blockers  : [any issues] / None
+  - Next Steps: [what's coming]
+
+  Let me know if you have any questions.
+
+  Thanks,
+  [Your Name]
+
+---
+
+### 5. Apology / Correction Email
+  Subject : Correction / Apology Regarding [Topic]
+
+  Hi [Name],
+
+  I want to apologize for [specific issue].
+
+  [One line acknowledging the impact].
+
+  Here's what I'm doing to fix it: [action].
+
+  It won't happen again. Thank you for your patience.
+
+  Best,
+  [Your Name]
+
+---
+
+### 6. Meeting Request Email
+  Subject : Meeting Request: [Topic] — [Proposed Date/Time]
+
+  Hi [Name],
+
+  I'd like to schedule a meeting to discuss [topic].
+
+  Proposed time: [Date], [Time], [Duration]
+  Agenda:
+    1. [Point 1]
+    2. [Point 2]
+
+  Please let me know if this works or suggest an alternate time.
+
+  Thanks,
+  [Your Name]
+
+
+=========================
+## Tone Guide
+
+  Situation               Tone
+  ----------------------  --------------------
+  To senior leadership    Formal, concise
+  To peers                Professional, friendly
+  To direct reports       Clear, supportive
+  To external clients     Polite, professional
+  To vendors              Direct, specific
+
+
+=========================
+## Common Closings
+
+  Formal      : "Yours sincerely," / "Respectfully,"
+  Professional: "Best regards," / "Kind regards,"
+  Friendly    : "Thanks," / "Best,"
+  Casual      : "Cheers," / "Talk soon,"
+
+
+=========================
+## Golden Rules for Email
+
+  1. One email = one topic. Don't mix multiple requests.
+  2. Reply within 24 hours, even if just to acknowledge.
+  3. Re-read before sending — check tone, typos, and attachments.
+  4. Don't use Reply All unless everyone needs to see it.
+  5. Keep it short — if it needs more than 3 paragraphs, pick up the phone.
+  6. Never send an angry email — draft it, wait, then decide.
+  7. CC sparingly — only include people who truly need to know.
+  8. Use BCC when emailing large groups to protect privacy.
