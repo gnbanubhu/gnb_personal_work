@@ -1,0 +1,70 @@
+INTERPERSONAL COMMUNICATION GUIDE
+==================================
+
+## Core Communication Formats
+
+### 1. The SBI Model (Situation → Behavior → Impact)
+Best for: feedback, difficult conversations
+
+  "In [situation], when you [behavior], it [impact]."
+
+  Example:
+  "In yesterday's meeting, when you interrupted me,
+  it made it hard for me to finish my point."
+
+
+### 2. NVC — Nonviolent Communication
+Best for: conflict resolution, emotional conversations
+
+  Observation → Feeling → Need → Request
+
+  Example:
+  "When the report was late [obs], I felt stressed [feeling]
+  because I need reliability [need].
+  Could we agree on a deadline process? [request]"
+
+
+### 3. The PREP Format
+Best for: presenting ideas, persuasion
+
+  Point → Reason → Example → Point (restate)
+
+  Example:
+  "We should adopt daily standups. [Point]
+  They reduce blockers early. [Reason]
+  Our last sprint saw 30% fewer delays with them. [Example]
+  That's why I recommend daily standups." [Point]
+
+
+### 4. STAR Format
+Best for: sharing experiences, interviews, updates
+
+  Situation → Task → Action → Result
+
+
+==================================
+## Quick Principles
+
+  - Listen actively   : Reflect back before responding
+  - Be direct         : State your need clearly, don't hint
+  - Separate facts from feelings : "I feel X" vs "You did Y"
+  - Assume positive intent : Start from good faith
+  - Close the loop    : Confirm understanding at the end
+
+
+==================================
+## Written Communication (Email / Slack / Docs)
+
+  1. Subject/opener  — state the purpose in one line
+  2. Context         — 1-2 sentences of background
+  3. Ask or update   — be specific about what you need
+  4. Deadline        — if applicable
+  5. Next step       — who does what by when
+
+
+==================================
+## Most Practical Starting Points
+
+  - SBI   → for giving or receiving feedback
+  - PREP  → for sharing ideas or making a case
+  These two cover 80% of everyday professional situations.
