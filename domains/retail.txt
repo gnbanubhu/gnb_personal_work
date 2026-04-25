@@ -1,0 +1,329 @@
+RETAIL DOMAIN — COMPONENTS, ARCHITECTURE & INTEGRATIONS
+=========================================================
+
+## What is the Retail Domain?
+
+  The retail domain covers all systems, processes, and technology
+  involved in selling products or services to end consumers —
+  through physical stores, e-commerce, mobile apps, or a combination
+  (omnichannel retail).
+
+  Modern retail is driven by:
+    - Customer experience        : Seamless, personalized shopping journeys.
+    - Inventory accuracy         : Right product, right place, right time.
+    - Speed                      : Fast order fulfillment and delivery.
+    - Data                       : Real-time insights driving decisions.
+
+
+=========================================================
+## CORE RETAIL BUSINESS COMPONENTS
+
+### 1. Product Management
+  - Product catalog              : Master list of all products with attributes.
+  - SKU management               : Unique identifier per product variant.
+  - Pricing                      : Base price, promotions, discounts, dynamic pricing.
+  - Product taxonomy             : Categories, sub-categories, attributes.
+  - Digital assets               : Images, videos, descriptions per product.
+
+### 2. Inventory Management
+  - Stock levels                 : Track quantity across warehouses and stores.
+  - Replenishment                : Auto-reorder when stock falls below threshold.
+  - Warehouse management         : Location, bin, rack-level tracking.
+  - Multi-location inventory     : Stock visibility across all fulfillment nodes.
+  - Dead stock / shrinkage       : Identify unsold or lost inventory.
+
+### 3. Order Management
+  - Order capture                : Accept orders from all channels.
+  - Order routing                : Route to nearest warehouse or store.
+  - Order fulfillment            : Pick, pack, ship.
+  - Order tracking               : Real-time status updates to customer.
+  - Returns & exchanges          : Reverse logistics management.
+  - Cancellations                : Handle pre-shipment and post-shipment cancels.
+
+### 4. Customer Management
+  - Customer profile             : Identity, contact, preferences, history.
+  - Loyalty programs             : Points, rewards, tiers.
+  - Segmentation                 : Group customers for targeted campaigns.
+  - Customer service             : Support tickets, chat, returns.
+  - Customer lifetime value (CLV): Measure long-term revenue per customer.
+
+### 5. Point of Sale (POS)
+  - In-store checkout            : Barcode scanning, payment, receipt.
+  - Cashier & self-checkout      : Both attended and unattended modes.
+  - Returns at POS               : In-store return processing.
+  - Store inventory lookup       : Check stock availability at POS.
+  - Offline mode                 : Continue sales during network outages.
+
+### 6. E-Commerce / Digital Storefront
+  - Product search & browse      : Search, filter, sort, recommendations.
+  - Shopping cart                : Add, update, remove items.
+  - Checkout flow                : Address, payment, order confirmation.
+  - User accounts                : Login, order history, saved addresses.
+  - Wishlist & save for later    : Deferred purchase management.
+
+### 7. Pricing & Promotions
+  - Base pricing                 : Cost + margin based pricing.
+  - Promotional pricing          : % off, buy X get Y, flash sales.
+  - Dynamic pricing              : Price changes based on demand/competition.
+  - Coupon & voucher management  : Generate, validate, redeem codes.
+  - Loyalty discounts            : Member-only pricing.
+
+### 8. Payments
+  - Payment gateway              : Process credit/debit, UPI, wallets.
+  - Fraud detection              : Flag suspicious transactions.
+  - Refunds & chargebacks        : Handle payment reversals.
+  - Split payments               : Pay with multiple methods.
+  - Buy Now Pay Later (BNPL)     : Deferred payment options.
+
+### 9. Supply Chain & Procurement
+  - Vendor management            : Supplier onboarding, contracts, performance.
+  - Purchase orders              : Raise, approve, track POs to suppliers.
+  - Goods receipt                : Inspect and confirm incoming stock.
+  - Supplier portals             : Vendors check PO status and invoices.
+  - Demand forecasting           : Predict future stock needs.
+
+### 10. Logistics & Fulfillment
+  - Warehouse operations         : Receiving, put-away, picking, packing, shipping.
+  - Last-mile delivery           : From warehouse/store to customer.
+  - Carrier management           : Rate shopping, carrier assignment, tracking.
+  - Returns logistics            : Reverse shipment handling.
+  - Same-day / next-day delivery : Express fulfillment workflows.
+
+### 11. Analytics & Reporting
+  - Sales reports                : Revenue, units sold, margins.
+  - Inventory reports            : Stock levels, turnover rate, aging.
+  - Customer analytics           : Behavior, purchase patterns, churn.
+  - Campaign performance         : ROI on promotions and marketing.
+  - Demand forecasting           : Predict future sales trends.
+
+
+=========================================================
+## RETAIL ARCHITECTURE DESIGN
+
+### Architecture Styles Used in Retail
+
+  1. Monolithic (Legacy Retail)
+       All components in one large application.
+       Simple but hard to scale. Common in older retail systems.
+
+  2. Microservices (Modern Retail)
+       Each domain (orders, inventory, catalog) is a separate service.
+       Independent deployment, scaling, and fault isolation.
+
+  3. Headless Commerce
+       Frontend (website/app) is decoupled from backend commerce engine.
+       Backend exposes APIs; any frontend can consume them.
+       Enables faster UI iteration without touching backend.
+
+  4. Composable Commerce
+       Best-of-breed services stitched together via APIs.
+       Replace any component (e.g., search engine, payment) independently.
+       Built on MACH principles: Microservices, API-first, Cloud-native, Headless.
+
+
+### High-Level Retail Architecture
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │                     CUSTOMER TOUCHPOINTS                    │
+  │   Web Store  |  Mobile App  |  POS Terminal  |  Call Center │
+  └─────────────────────┬───────────────────────────────────────┘
+                        │
+  ┌─────────────────────▼───────────────────────────────────────┐
+  │                     API GATEWAY LAYER                       │
+  │         Auth | Rate Limiting | Routing | Logging            │
+  └──────┬──────────┬──────────┬──────────┬──────────┬──────────┘
+         │          │          │          │          │
+  ┌──────▼──┐ ┌─────▼───┐ ┌───▼──────┐ ┌─▼───────┐ ┌▼──────────┐
+  │ Product │ │  Order  │ │Inventory │ │Customer │ │ Payment   │
+  │ Service │ │ Service │ │ Service  │ │ Service │ │ Service   │
+  └──────┬──┘ └─────┬───┘ └───┬──────┘ └─┬───────┘ └┬──────────┘
+         │          │          │           │          │
+  ┌──────▼──────────▼──────────▼───────────▼──────────▼──────────┐
+  │                     MESSAGE BUS (Kafka)                      │
+  │         Events: OrderPlaced, StockUpdated, PaymentDone       │
+  └──────┬──────────┬──────────┬──────────┬──────────────────────┘
+         │          │          │          │
+  ┌──────▼──┐ ┌─────▼───┐ ┌───▼──────┐ ┌─▼───────────┐
+  │Warehouse│ │Logistics│ │Notifi-   │ │  Analytics  │
+  │  (WMS)  │ │  (TMS)  │ │cation    │ │  Platform   │
+  └─────────┘ └─────────┘ └──────────┘ └─────────────┘
+
+
+### Core Services in Retail Microservices
+
+  Service               Responsibility
+  --------------------  -------------------------------------------------
+  Product Catalog       Manage product data, attributes, pricing
+  Inventory Service     Track stock levels across all locations
+  Order Service         Capture, manage, and fulfill orders
+  Customer Service      Customer profiles, loyalty, preferences
+  Payment Service       Process payments, refunds, fraud checks
+  Search Service        Product search and discovery (Elasticsearch)
+  Recommendation Engine Personalized product suggestions (ML-based)
+  Notification Service  Email, SMS, push notifications
+  Pricing Service       Apply pricing rules, promotions, discounts
+  Cart Service          Manage shopping carts (often Redis-backed)
+  WMS                   Warehouse management — pick, pack, ship
+  TMS                   Transport/logistics management
+
+
+=========================================================
+## RETAIL SYSTEM INTEGRATIONS
+
+### 1. POS ↔ Inventory Integration
+  - When a sale happens at POS → Inventory Service reduces stock count.
+  - When stock falls below threshold → Replenishment order triggered.
+  - Integration: Real-time via REST API or Kafka event.
+
+### 2. E-Commerce ↔ Order Management System (OMS)
+  - Customer places order on website → OMS captures and processes it.
+  - OMS routes order to nearest fulfillment center.
+  - Integration: REST API (sync) or Kafka (async).
+
+### 3. OMS ↔ Warehouse Management System (WMS)
+  - OMS sends pick list to WMS → WMS executes pick, pack, ship.
+  - WMS sends shipment confirmation back to OMS.
+  - Integration: Kafka events or REST API.
+
+### 4. WMS ↔ Transport Management System (TMS)
+  - WMS triggers shipment → TMS selects carrier, generates label.
+  - TMS sends tracking number back to OMS and customer.
+  - Integration: REST API + Webhook for tracking updates.
+
+### 5. E-Commerce ↔ Payment Gateway
+  - Customer submits payment → Payment Service calls gateway (Stripe, Razorpay).
+  - Gateway returns success/failure → Order confirmed or retried.
+  - Integration: REST API (sync) + Webhook for async callbacks.
+
+### 6. Product Catalog ↔ Search Engine
+  - When product is added/updated → Search index updated in Elasticsearch.
+  - Customer searches → Query hits Elasticsearch, not the catalog DB.
+  - Integration: Kafka event → Elasticsearch indexer.
+
+### 7. CRM ↔ Marketing Platform
+  - Customer data synced from CRM to marketing tools (Salesforce, HubSpot).
+  - Campaign results (opens, clicks) synced back to CRM.
+  - Integration: Batch sync (nightly ETL) or real-time webhook.
+
+### 8. ERP ↔ Retail Systems
+  - Finance data (invoices, payments) flows to ERP (SAP, Oracle).
+  - Procurement and vendor data managed in ERP, synced to retail systems.
+  - Integration: File-based (EDI/CSV) or REST API.
+
+### 9. Supplier / Vendor Integration
+  - Retailers send Purchase Orders to suppliers via EDI or portal.
+  - Suppliers confirm delivery, send ASN (Advanced Shipping Notice).
+  - Integration: EDI 850/856, SFTP file exchange, or REST API.
+
+### 10. Analytics & Data Warehouse Integration
+  - Transactional data (orders, inventory, sales) → ETL pipeline → Data Warehouse.
+  - BI tools (Tableau, Power BI) query warehouse for reporting.
+  - Integration: Kafka → Spark → Snowflake / Redshift.
+
+### 11. Loyalty Platform Integration
+  - Order completed → Points credited to loyalty account.
+  - Customer redeems points at checkout → Balance deducted.
+  - Integration: REST API (sync at checkout) + async event for accumulation.
+
+### 12. Notification Service Integration
+  - Order placed → Send order confirmation email/SMS.
+  - Order shipped → Send tracking link.
+  - Promotion → Send targeted push notification.
+  - Integration: Kafka event → Notification Service → Email/SMS provider (SendGrid, Twilio).
+
+
+=========================================================
+## DATA FLOWS IN RETAIL
+
+### Order-to-Cash Flow
+  Customer places order
+    → Payment authorized
+    → Order confirmed
+    → Inventory reserved
+    → Warehouse picks & packs
+    → Carrier picks up
+    → Customer receives delivery
+    → Payment settled
+    → Invoice generated in ERP
+
+### Procure-to-Pay Flow
+  Demand forecast triggers low stock
+    → Purchase order raised to supplier
+    → Supplier confirms and ships
+    → Goods received at warehouse
+    → Quality check done
+    → Inventory updated
+    → Invoice received and paid via ERP
+
+### Return-to-Refund Flow
+  Customer initiates return
+    → Return authorized (RMA created)
+    → Item picked up or dropped at store
+    → Item received at warehouse
+    → Quality inspected
+    → Inventory restocked or disposed
+    → Refund processed to customer
+
+
+=========================================================
+## KEY RETAIL TECHNOLOGIES
+
+  Area                  Technologies
+  --------------------  -------------------------------------------
+  E-Commerce Platform   Shopify, Magento, SAP Commerce, Salesforce B2C
+  OMS                   Manhattan OMS, IBM Sterling, Fluent Commerce
+  WMS                   Manhattan WMS, Blue Yonder, SAP EWM
+  POS                   NCR, Oracle Retail, Lightspeed, Square
+  ERP                   SAP S/4HANA, Oracle ERP, Microsoft Dynamics
+  CRM                   Salesforce, HubSpot, Adobe Experience Cloud
+  Search                Elasticsearch, Algolia, Solr
+  Payments              Stripe, Razorpay, PayPal, Adyen, Braintree
+  Analytics             Snowflake, Databricks, Tableau, Power BI
+  Messaging             Apache Kafka, RabbitMQ, AWS SQS
+  CDN / Performance     Cloudflare, Akamai, AWS CloudFront
+  Personalization       Adobe Target, Dynamic Yield, Salesforce Einstein
+
+
+=========================================================
+## RETAIL KPIs (KEY PERFORMANCE INDICATORS)
+
+  KPI                         Description
+  --------------------------  ----------------------------------------
+  GMV (Gross Merchandise Value) Total value of goods sold
+  Conversion Rate             % of visitors who make a purchase
+  Average Order Value (AOV)   Average spend per order
+  Customer Acquisition Cost   Cost to acquire a new customer (CAC)
+  Customer Lifetime Value     Total revenue from a customer over time
+  Inventory Turnover          How fast inventory is sold and replaced
+  Order Fill Rate             % of orders fulfilled completely
+  Return Rate                 % of orders returned by customers
+  Cart Abandonment Rate       % of carts not converted to orders
+  Net Promoter Score (NPS)    Customer satisfaction and loyalty score
+
+
+=========================================================
+## RETAIL INTEGRATION CHALLENGES
+
+  Challenge                   Solution
+  --------------------------  ----------------------------------------
+  Real-time inventory sync    Kafka events for instant stock updates
+  Order routing across nodes  OMS with smart routing rules
+  Omnichannel consistency     Centralized catalog and inventory service
+  Legacy POS systems          Adapters and middleware (ESB/API layer)
+  Supplier data formats       EDI adapters or supplier portals
+  Peak load (sales events)    Auto-scaling, message queues, caching
+  Data consistency            Saga pattern for distributed transactions
+  Fraud prevention            ML-based fraud detection at payment layer
+
+
+=========================================================
+## GOLDEN RULES OF RETAIL ARCHITECTURE
+
+  1. Single source of truth    : One system owns each data domain (inventory, catalog).
+  2. Decouple channels         : Web, app, and store share the same backend via APIs.
+  3. Design for peak traffic   : Black Friday / Diwali sales need elastic scaling.
+  4. Real-time inventory        : Stale stock data leads to overselling and cancellations.
+  5. Event-driven first        : Use async messaging to decouple services.
+  6. Customer-first design     : Every system decision should improve customer experience.
+  7. Automate fulfillment      : Minimize manual steps from order to delivery.
+  8. Monitor end-to-end        : Trace every order from placement to delivery.

@@ -1,0 +1,122 @@
+OFFICE MEETINGS GUIDE
+======================
+
+## Types of Meetings
+
+  1. Stand-up / Daily Sync     — quick team status update (15 min)
+  2. One-on-One (1:1)          — manager & employee check-in
+  3. Brainstorming / Ideation  — generating ideas as a group
+  4. Decision Meeting          — align and decide on a specific topic
+  5. Status Update Meeting     — project/work progress review
+  6. Retrospective             — what went well, what to improve
+  7. Kick-off Meeting          — start of a new project or initiative
+  8. All-Hands / Town Hall     — company-wide announcements and updates
+
+
+======================
+## Before the Meeting
+
+  - Define the purpose         : Know WHY the meeting is happening.
+  - Set a clear agenda         : Share it at least 24 hours in advance.
+  - Invite the right people    : Only those who are needed.
+  - Share pre-reads            : Send documents/data ahead so time isn't wasted reading in the room.
+  - Book the right duration    : Default to 30 min; use 60 only if truly needed.
+
+
+======================
+## Meeting Agenda Template
+
+  Meeting Title  : [Topic]
+  Date & Time    : [Date], [Time]
+  Duration       : [X minutes]
+  Attendees      : [Names / Roles]
+  Objective      : [What we want to decide or achieve]
+
+  Agenda:
+    1. [Topic 1]          — [Time allocated] — [Owner]
+    2. [Topic 2]          — [Time allocated] — [Owner]
+    3. Action Items Review— 5 min            — All
+
+  Pre-read: [Link or attachment if any]
+
+
+======================
+## During the Meeting
+
+  - Start on time              : Don't wait for late joiners.
+  - Appoint a facilitator      : Someone keeps the discussion on track.
+  - Appoint a note-taker       : Capture decisions and action items.
+  - Stay on agenda             : Park off-topic items in a "parking lot."
+  - Encourage participation    : Ask quiet members directly — "What do you think, [Name]?"
+  - Avoid side conversations   : Stay focused and present.
+  - Summarize decisions        : Before moving on, confirm what was decided.
+
+
+======================
+## How to Participate Effectively
+
+  - Come prepared              : Read the agenda and pre-reads.
+  - Speak up early             : One sentence in the first 5 min makes it easier.
+  - Be concise                 : Make your point, give one reason, stop.
+  - Listen actively            : Don't prepare your response while others are talking.
+  - Disagree constructively    : "I see it differently — here's my thinking..."
+  - Avoid dominating           : Give others space to speak.
+  - Ask clarifying questions   : "Can you elaborate on that?" / "What does success look like?"
+
+
+======================
+## After the Meeting
+
+  - Send meeting notes         : Within 24 hours.
+  - Capture action items clearly:
+      - What needs to be done
+      - Who is responsible
+      - By when (deadline)
+  - Follow up on blockers      : Don't let action items go stale.
+  - Cancel if no longer needed : Don't meet just to meet.
+
+
+======================
+## Meeting Notes Template
+
+  Meeting        : [Title]
+  Date           : [Date]
+  Attendees      : [Names]
+
+  Summary        : [2-3 line recap of what was discussed]
+
+  Decisions Made :
+    1. [Decision 1]
+    2. [Decision 2]
+
+  Action Items   :
+    - [Task]     | Owner: [Name] | Due: [Date]
+    - [Task]     | Owner: [Name] | Due: [Date]
+
+  Parking Lot    : [Topics deferred to a future meeting]
+
+  Next Meeting   : [Date & Time if applicable]
+
+
+======================
+## Common Meeting Anti-Patterns (What to Avoid)
+
+  - No agenda                  : Meeting wanders, nothing gets decided.
+  - Too many attendees         : More than 7 people slows decisions.
+  - Running over time          : Disrespects everyone's schedule.
+  - No action items            : Meeting ends with no clear next steps.
+  - Recurring meetings with no purpose : Cancel or reduce frequency.
+  - Multitasking               : Phones and laptops kill engagement.
+  - HiPPO effect               : Highest Paid Person's Opinion dominates — encourage all voices.
+
+
+======================
+## Golden Rules for Meetings
+
+  1. Every meeting needs a clear objective — if you can't state it, cancel the meeting.
+  2. End with action items — who does what by when.
+  3. Respect the clock — start and end on time.
+  4. Fewer people = faster decisions.
+  5. If it can be an email, make it an email.
+  6. Follow up in writing after every important meeting.
+  7. Prepare more than you think you need to.

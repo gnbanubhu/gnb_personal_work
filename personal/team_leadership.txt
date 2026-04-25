@@ -1,0 +1,161 @@
+TEAM LEADERSHIP GUIDE
+======================
+
+## What is Leadership?
+
+  Leadership is not a title — it is a behavior.
+  It is the ability to influence, inspire, and guide people
+  toward a shared goal while bringing out the best in them.
+
+
+======================
+## Core Leadership Styles
+
+  Style               Best Used When
+  ------------------  ----------------------------------------
+  Visionary           Setting direction, inspiring change
+  Coaching            Developing individual team members
+  Democratic          Building buy-in, gathering diverse input
+  Pacesetting         High-performing teams, quick results
+  Affiliative         Healing team rifts, boosting morale
+  Commanding          Crisis situations, urgent decisions
+
+
+======================
+## Responsibilities of a Team Leader
+
+  - Set clear goals            : Team knows what success looks like.
+  - Communicate direction      : Keep everyone aligned on priorities.
+  - Remove blockers            : Clear the path so the team can do their best work.
+  - Give feedback regularly    : Don't save it all for performance reviews.
+  - Recognize contributions    : Acknowledge effort and results publicly.
+  - Develop team members       : Invest in their growth, not just output.
+  - Make decisions             : Don't avoid hard calls — decide and move forward.
+  - Be accountable             : Own outcomes, including failures.
+
+
+======================
+## How to Build Trust with Your Team
+
+  - Be consistent              : Say what you'll do, do what you say.
+  - Be transparent             : Share context, not just instructions.
+  - Listen genuinely           : Make people feel heard, not just managed.
+  - Admit mistakes             : Vulnerability builds trust faster than perfection.
+  - Advocate for your team     : Represent their interests to leadership.
+  - Protect your team          : Shield them from unnecessary noise and politics.
+  - Follow through             : Never leave commitments unaddressed.
+
+
+======================
+## Giving Feedback (SBI Model)
+
+  Situation  → Behavior  → Impact
+
+  Constructive:
+    "In the sprint review [S], when you presented without data [B],
+    the stakeholders couldn't make a decision [I].
+    Next time, include the metrics slide."
+
+  Positive:
+    "During the client call [S], when you stepped in to clarify the issue [B],
+    it saved us from losing their confidence [I]. Well done."
+
+  Rules:
+    - Give feedback soon after the event.
+    - Be specific, not general ("you always..." is not feedback).
+    - Focus on behavior, not personality.
+    - Balance recognition with correction.
+
+
+======================
+## Running Effective 1:1s
+
+  Frequency    : Weekly or bi-weekly (30–45 min)
+  Who owns it  : The team member — it's their meeting, not yours.
+
+  Agenda:
+    1. How are you doing? (personal check-in)
+    2. What are you working on? (priorities & progress)
+    3. Any blockers I can help remove?
+    4. Feedback — for them and from them
+    5. Career / growth discussion (monthly)
+
+  Tips:
+    - Take notes and follow up on action items.
+    - Don't turn 1:1s into status updates — that's what standups are for.
+    - Ask "What do you need from me?" every session.
+
+
+======================
+## Delegation Framework
+
+  Step 1  : Choose the right person (skill + capacity).
+  Step 2  : Define the outcome clearly, not the method.
+  Step 3  : Give the context and why it matters.
+  Step 4  : Agree on checkpoints — not micromanagement, but visibility.
+  Step 5  : Provide the resources and authority needed.
+  Step 6  : Let them work — trust the process.
+  Step 7  : Give feedback after completion.
+
+  Delegation Levels:
+    Level 1 — "Do exactly this."
+    Level 2 — "Research and recommend, I'll decide."
+    Level 3 — "Decide and inform me after."
+    Level 4 — "Own it fully — update me only if needed."
+
+
+======================
+## Handling Conflict in the Team
+
+  - Address it early           : Small conflicts grow if ignored.
+  - Stay neutral               : Don't take sides before hearing all perspectives.
+  - Focus on the issue         : Not the person.
+  - Facilitate a conversation  : Bring both parties together, not separately.
+  - Find common ground         : What does each person actually need?
+  - Document agreements        : Put the resolution in writing.
+  - Follow up                  : Check that the resolution is holding.
+
+
+======================
+## Motivating Your Team
+
+  Intrinsic Motivators (long-lasting):
+    - Autonomy      : Let them own their work.
+    - Mastery       : Give stretch assignments that help them grow.
+    - Purpose       : Connect their work to the bigger mission.
+
+  Extrinsic Motivators (short-term):
+    - Recognition   : Public praise, shout-outs, awards.
+    - Rewards       : Bonuses, promotions, perks.
+    - Feedback      : People want to know how they're doing.
+
+  What kills motivation:
+    - Micromanagement
+    - Unfair treatment
+    - No recognition
+    - No growth opportunity
+    - Unclear expectations
+
+
+======================
+## Leadership Anti-Patterns (What to Avoid)
+
+  - Micromanaging              : Destroys autonomy and trust.
+  - Avoiding difficult conversations : Problems don't solve themselves.
+  - Playing favorites          : Erodes team morale fast.
+  - Taking credit              : Share wins with the team, own the losses.
+  - Being unavailable          : Your team needs access to you.
+  - Changing direction too often: Creates confusion and frustration.
+  - Leading by fear            : Short-term compliance, long-term disengagement.
+
+
+======================
+## Golden Rules of Leadership
+
+  1. Lead by example — your behavior sets the team's standard.
+  2. Clarity is kindness — vague instructions waste everyone's time.
+  3. People over process — rules serve the team, not the other way around.
+  4. Develop others — your job is to make your team better, not just productive.
+  5. Listen twice as much as you speak.
+  6. Celebrate progress, not just results.
+  7. A leader's job is to create more leaders, not more followers.

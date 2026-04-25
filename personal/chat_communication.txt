@@ -1,0 +1,201 @@
+CHAT COMMUNICATION GUIDE
+=========================
+
+## What is Chat Communication?
+
+  Chat communication covers all real-time and async text-based
+  messaging in professional settings — Slack, Microsoft Teams,
+  Google Chat, WhatsApp (work groups), and similar platforms.
+
+  It is fast, informal, and easy to misread.
+  Used well, it speeds up work. Used poorly, it creates noise and confusion.
+
+
+=========================
+## GENERAL PRINCIPLES
+
+  - Be clear and concise       : Get to the point quickly.
+  - One topic per message      : Don't mix multiple asks in one message.
+  - Use threads                : Keep conversations organized and easy to follow.
+  - Respect availability       : Not every message needs an instant reply.
+  - Choose the right channel   : DM for private, channel for team-wide topics.
+  - Don't type in anger        : Step away, cool down, then respond.
+  - Read before you send       : Re-read to check tone and clarity.
+
+
+=========================
+## CHAT ETIQUETTE
+
+  Do's:
+    - Use the person's name when addressing them directly.
+    - Acknowledge messages with a quick reply or emoji reaction.
+    - Set your status (available / busy / in a meeting / OOO).
+    - Use @mention only when that person specifically needs to see it.
+    - Keep it professional even in casual chats.
+    - Use bullet points for multiple items — walls of text are hard to read.
+
+  Don'ts:
+    - Don't just say "Hi" and wait — state your question immediately.
+      Wrong : "Hi"  [5 min gap]  "Are you free?"  [5 min gap]  "I had a question..."
+      Right : "Hi [Name], quick question — can you review PR #42 by EOD?"
+    - Don't use ALL CAPS — it reads as shouting.
+    - Don't send multiple one-word messages in a row.
+      Wrong : "Hey" → "Quick question" → "About the report" → "Do you have it?"
+      Right : "Hey, do you have the report ready? Need it for the 3pm meeting."
+    - Don't use chat for long or sensitive conversations — use a call or email.
+    - Don't expect immediate replies outside working hours.
+    - Don't forward private conversations without permission.
+
+
+=========================
+## MESSAGE FORMATS
+
+### Asking for Help
+  "Hi [Name], could you help me with [specific issue]?
+  I've already tried [what you tried]. Let me know when you're free."
+
+### Making a Request
+  "Hi [Name], could you [action] by [time/date]?
+  Context: [1 line reason]. Let me know if you need anything from me."
+
+### Sharing an Update
+  "Quick update on [topic]:
+  - Done    : [what's complete]
+  - In Progress : [what's ongoing]
+  - Blocker : [any issue] / None
+  Tagging [Name] in case it affects your work."
+
+### Asking a Question
+  "Hi [Name], [direct question]?
+  Background: [1–2 lines of context if needed]."
+
+### Flagging an Urgent Issue
+  "@[Name] — Heads up: [issue] is affecting [impact].
+  I'm [what you're doing about it]. Will update in [timeframe]."
+
+### Giving a Heads-Up
+  "FYI — [brief info]. No action needed from your end, just keeping you in the loop."
+
+### Following Up
+  "Hi [Name], following up on [topic] from [day/date].
+  Could you let me know the status? Happy to help if there's a blocker."
+
+### Declining or Pushing Back
+  "Hi [Name], I won't be able to [request] by [time] — I'm currently handling [other priority].
+  I can get to it by [alternate time]. Does that work?"
+
+
+=========================
+## TONE IN CHAT
+
+  Chat lacks facial expressions and voice tone — words carry everything.
+
+  Comes across as rude:
+    "Why didn't you do this?"
+    "That's wrong."
+    "No."
+
+  Better versions:
+    "I noticed this wasn't done — is there a blocker I can help with?"
+    "I think there may be an issue here — can we take a look together?"
+    "That won't work for this case. Here's what I suggest instead: [suggestion]."
+
+  Sarcasm and jokes:
+    - Avoid sarcasm in text — it almost always misreads.
+    - Light humor is fine with close colleagues, but read the room.
+    - When in doubt, leave it out.
+
+
+=========================
+## EMOJI & REACTIONS
+
+  Used well, emojis add warmth and speed up communication.
+  Overused, they look unprofessional.
+
+  Common professional uses:
+    👍  — acknowledged / agree / will do
+    ✅  — done / completed
+    🙏  — thanks
+    👀  — I'm looking into it / I've seen this
+    🔁  — please share / please forward
+    ⏳  — working on it
+    🚨  — urgent / flag
+
+  Avoid in formal or senior-leader chats:
+    😂 🤣 😜 🥳 in serious or escalation threads.
+
+
+=========================
+## PLATFORM-SPECIFIC TIPS
+
+### Slack
+  - Use channels for team topics, DMs for personal ones.
+  - Reply in threads to avoid flooding the main channel.
+  - Pin important messages in channels for easy reference.
+  - Use /remind to set reminders for yourself.
+  - Set Do Not Disturb (DND) during focus time.
+
+### Microsoft Teams
+  - Use @mentions to alert specific people in a channel.
+  - Use "Reply" in a conversation thread, not a new message.
+  - Use Urgent delivery for truly time-sensitive messages.
+  - Keep channels organized by project or topic.
+  - Use status messages to communicate availability.
+
+### WhatsApp (Work Groups)
+  - Keep it professional — assume all messages are visible to everyone.
+  - Don't add people to groups without asking first.
+  - Mute non-urgent groups during work hours.
+  - Avoid late-night messages unless urgent.
+  - Use "Reply" to a specific message for clarity in busy groups.
+
+
+=========================
+## ASYNC vs REAL-TIME CHAT
+
+  Use Async (don't expect immediate reply) for:
+    - Updates and FYIs
+    - Non-urgent questions
+    - Sharing documents or links
+    - Status reports
+
+  Use Real-Time (expect quick reply) for:
+    - Urgent blockers
+    - Quick back-and-forth decisions
+    - Live collaboration
+
+  When in doubt — ask:
+    "Is this a good time to chat, or should I send you a message?"
+
+
+=========================
+## WHEN TO SWITCH FROM CHAT TO ANOTHER CHANNEL
+
+  Switch to a Call when:
+    - The chat has gone back and forth more than 5 times.
+    - The topic is emotional or sensitive.
+    - You need to show something (screen share).
+    - There's a misunderstanding that keeps growing.
+
+  Switch to Email when:
+    - The message needs a formal record.
+    - You're communicating with external parties.
+    - The content is long, detailed, or needs attachments.
+
+  Switch to a Meeting when:
+    - Multiple stakeholders need to align.
+    - A decision needs group input.
+    - The issue is complex and needs discussion.
+
+
+=========================
+## GOLDEN RULES OF CHAT COMMUNICATION
+
+  1. Don't make people wait for your question — ask it upfront.
+  2. Short messages, clear intent — don't make people decode you.
+  3. Threads keep conversations clean — always use them.
+  4. Respond within a reasonable time — silence reads as ignoring.
+  5. Tone is everything in text — when in doubt, be warmer.
+  6. Not everything needs a chat — call when it's faster or sensitive.
+  7. Respect boundaries — don't expect replies outside work hours.
+  8. Less noise = more signal — don't over-message or over-notify.
